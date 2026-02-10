@@ -1,6 +1,13 @@
 const jwt = require("jsonwebtoken");
 const { AppError } = require("../middlewares/errorMiddleware");
+const User = require("../models/userModel");
+const UserAssignment = require("../models/userAssignment");
+const AdministrativeUnit = require("../models/administrativeUnitModel");
 const Role = require("../models/roleModel");
+const Permission = require("../models/permissionModel");
+const UserPermission = require("../models/userPermissionModel");
+
+
 
 const protect = (req, res, next) => {
   // Get token from header
@@ -23,149 +30,174 @@ const protect = (req, res, next) => {
     }
 
     // Attach user data to request object
-    req.user = decoded; // assuming your token contains user info
+    req.user = decoded
+ // assuming your token contains user info
     next();
   });
 };
 
-const verifyUserRole = async (req, res, next) => {
-  const userId = req.user.payload.userId;
+const levelGuard = (allowedLevels = []) => {
+  return (req, res, next) => {
+    if (!req.user || !req.user.unit) {
+      return next(new AppError("Unauthorized", 401));
+    }
 
-  // Retrieve the latest role assigned to the user based on the `created_at` timestamp
-  const latestRole = await Role.findOne({
-    where: { user_id: userId },
-    order: [["created_at", "DESC"]], // Order by the most recent assignment
-  });
+    const userLevel = req.user.unit.level;
 
-  // console.log(latestRole);
+    if (!allowedLevels.includes(userLevel)) {
+      return next(
+        new AppError(
+          "You do not have access to perform this action at your level",
+          403
+        )
+      );
+    }
 
-  if (!latestRole) {
-    return next(
-      new AppError("Role information not found. Please log in again.", 403)
-    );
-  }
+    next();
+  };
+};
 
-  // Check if the user is a Group Leader or Professional
-  const allowedRoles = ["Sub-City Head", "Sector Leader"];
-  if (!allowedRoles.includes(latestRole.categories)) {
-    return next(new AppError("Access denied. Invalid role.", 403));
-  }
+const assignmentMiddleware = async (req, res, next) => {
+  try {
+    // 1️⃣ Ensure authMiddleware ran
 
-  // Add role information to the request for downstream use
-  req.user.role = latestRole.categories;
+    // console.log(req.user.payload)
+    if (!req.user.payload || !req.user.payload.user_id) {
+      return next(new AppError("Unauthorized", 401));
+    }
 
-  next();
+    // 2️⃣ Load user
+    const user = await User.findByPk(req.user.payload.user_id);
+    if (!user) {
+      return next(new AppError("User not found", 404));
+    }
+
+    // 3️⃣ Block deactivated users
+    if (user.status === "DEACTIVATED") {
+      return next(new AppError("Account is deactivated", 403));
+    }
+
+    // 4️⃣ Allow login but block system access if unassigned
+    if (user.status === "UNASSIGNED") {
+      return next(
+        new AppError(
+          "Your account is awaiting assignment by an administrator",
+          403,
+          "PENDING_ASSIGNMENT"
+        )
+      );
+    }
+
+    // 5️⃣ Load assignment (single assignment guaranteed)
+    const assignment = await UserAssignment.findOne({
+      where: { user_id: user.user_id },
+    });
+
+    if (!assignment) {
+      // Safety net — DB inconsistency
+      return next(
+        new AppError(
+          "User is active but has no assignment",
+          500
+        )
+      );
+    }
+
+    // 6️⃣ Load unit
+    const unit = await AdministrativeUnit.findByPk(assignment.unit_id);
+    if (!unit) {
+      return next(new AppError("Assigned unit not found", 500));
+    }
+
+    // 7️⃣ Load role
+    const role = await Role.findByPk(assignment.role_id);
+    if (!role) {
+      return next(new AppError("Assigned role not found", 500));
+    }
+
+    // 8️⃣ Attach context to request
+req.user = {
+  id: user.user_id,
+  status: user.status,
+  assignment: {
+    id: assignment.id,
+  },
+  unit: {
+    id: unit.id,
+    level: unit.level,
+    parent_id: unit.parent_id,
+    name: unit.name,
+  },
+  role: {
+    id: role.id,
+    name: role.name,
+  },
 };
 
 
-const verifySubcityLeader = async (req, res, next) => {
-  const userId = req.user.payload.userId;
-
-  // console.log(req.user);
-
-  // Retrieve the latest role assigned to the user based on created_at timestamp
-  const latestRole = await Role.findOne({
-    where: { user_id: userId },
-    order: [["created_at", "DESC"]], // Order by the most recent assignment
-  });
-
-  // console.log(latestRole.categories);
-
-  if (!latestRole || latestRole.categories !== "Sub-City Head") {
-    return next(new AppError("Please Login As a Sub city leader.", 403));
+    next();
+  } catch (error) {
+    next(error);
   }
-
-  next();
 };
 
-const verifySectorLeader = async (req, res, next) => {
+const permissionMiddleware = (requiredPermissionName) => {
+  return async (req, res, next) => {
+    try {
+      // 1️⃣ Ensure assignmentMiddleware ran
+      if (!req.user || !req.user.assignment) {
+        return next(new AppError("Unauthorized", 401));
+      }
 
-  const userId = req.user.payload.userId;
-  // console.log(req.user);
+      const assignmentId = req.user.assignment.id;
 
-  // Retrieve the latest role assigned to the user based on created_at timestamp
-  const latestRole = await Role.findOne({
-    where: { user_id: userId },
-    order: [["created_at", "DESC"]], // Order by the most recent assignment
-  });
+      // 2️⃣ Find permission by name
+      const permission = await Permission.findOne({
+        where: { name: requiredPermissionName },
+      });
 
-  // console.log(latestRole.categories);
+      if (!permission) {
+        // Developer/config error
+        return next(
+          new AppError(
+            `Permission '${requiredPermissionName}' is not defined`,
+            500
+          )
+        );
+      }
 
-  if (!latestRole || latestRole.categories !== "Sector Leader") {
-    return next(new AppError("Please Login As a Sector leader.", 403));
-  }
+      // 3️⃣ Check if user has this permission
+      const userPermission = await UserPermission.findOne({
+        where: {
+          assignment_id: assignmentId,
+          permission_id: permission.id,
+        },
+      });
 
-  next();
-};
+      if (!userPermission) {
+        return next(
+          new AppError(
+            "You do not have permission to perform this action",
+            403
+          )
+        );
+      }
 
-const verifyAdmin = async (req, res, next) => {
-  const userId = req.user.payload.userId;
-
-  // console.log(req.user);
-
-  // Retrieve the latest role assigned to the user based on created_at timestamp
-  const latestRole = await Role.findOne({
-    where: { user_id: userId },
-    order: [["created_at", "DESC"]], // Order by the most recent assignment
-  });
-
-  // console.log(latestRole.categories);
-
-  if (!latestRole || latestRole.categories !== "Admin") {
-    return next(new AppError("Please Login As an Admin.", 403));
-  }
-
-  next();
-};
-
-const verifyRealUserRole = async (req, res, next) => {
-  const userId = req.user.payload.userId;
-
-  console.log(req.user);
-
-  // Retrieve the latest role assigned to the user based on created_at timestamp
-  const latestRole = await Role.findOne({
-    where: { user_id: userId.userId },
-    order: [["created_at", "DESC"]], // Order by the most recent assignment
-  });
-
-  // console.log(latestRole.categories);
-
-  if (!latestRole || latestRole.categories !== "user") {
-    return next(new AppError("Please Login As a User.", 403));
-  }
-
-  next();
+      // 4️⃣ Permission granted
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
 };
 
 
 
-const verifyCommittee = async (req, res, next) => {
-  const userId = req.user.payload.userId;
 
-  // console.log(req.user);
-
-  // Retrieve the latest role assigned to the user based on created_at timestamp
-  const latestRole = await Role.findOne({
-    where: { user_id: userId },
-    order: [["created_at", "DESC"]], // Order by the most recent assignment
-  });
-
-  // console.log(latestRole.categories);
-
-  if (!latestRole || latestRole.categories !== "Committee") {
-    return next(new AppError("Please Login As a Committee.", 403));
-  }
-
-  next();
-};
 
 module.exports = {
   protect,
-  verifySubcityLeader,
-  verifySectorLeader,
-  verifyAdmin,
-  verifyUserRole,
-  verifyRealUserRole,
-  verifyCommittee,
+  levelGuard,
+  assignmentMiddleware,
+  permissionMiddleware
 };

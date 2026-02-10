@@ -6,7 +6,12 @@ const {
   unassignCommitteeService,
   getAllCommitteeLeadersService,
   resetCommitteeLeaderPasswordService,
-  createAttendanceService
+  createAttendanceService,
+  getUserAttendanceService,
+  getCommitteeAttendanceService,
+  getAttendanceBySectorService,
+  getAttendanceReportService,
+  updateAttendanceCommentService
 } = require("../services/committeeService");
 
 const createCommitteeConroller = async (req, res, next) => {
@@ -171,6 +176,118 @@ const createAttendanceController = async (req, res, next) => {
     next(error);
   }
 };
+
+
+const getUserAttendanceController = async (req, res, next) => {
+  try {
+    const { user_id, page = 1, limit = 10 } = req.params;
+
+    if (!user_id) {
+      throw new AppError("User ID is required", 400);
+    }
+
+    const result = await getUserAttendanceService(user_id,{
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "User attendance fetched successfully",
+     ...result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 📘 Get Attendance by Committee (Paginated)
+const getCommitteeAttendanceController = async (req, res, next) => {
+  try {
+    const { committee_id, page, limit } = req.params;
+
+    if (!committee_id) {
+      throw new AppError("School ID is required", 400);
+    }
+
+    const attendanceRecords = await getCommitteeAttendanceService(committee_id, page, limit);
+
+    return res.status(200).json({
+      success: true,
+      message: "School attendance fetched successfully",
+      ...attendanceRecords, // includes pagination info + data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 📘 Get Attendance by Sector (Paginated)
+const getAttendanceBySectorController = async (req, res, next) => {
+  try {
+    const { page, limit } = req.params;
+    const sector_id = req.user.payload.categoryId;
+
+    const attendanceData = await getAttendanceBySectorService(sector_id, page, limit);
+
+    return res.status(200).json({
+      success: true,
+      message: "Attendance records fetched successfully for the given sector",
+      ...attendanceData, // includes pagination info + data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getAttendanceReportController = async (req, res, next) => {
+  try {
+    const { committee_name, first_name, last_name, startDate, endDate, page, limit } = req.body;
+
+    const reportData = await getAttendanceReportService({
+      committee_name,
+      first_name,
+      last_name,
+      startDate,
+      endDate,
+      page,
+      limit,
+      sector_id: req.user.payload.categoryId, // optional: restrict to user's sector
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Attendance report fetched successfully",
+      ...reportData,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+const updateAttendanceCommentController = async (req, res, next) => {
+  try {
+    const { attendance_id } = req.params;
+    const { comments } = req.body;
+
+    if (!comments) {
+      return res.status(400).json({ success: false, message: "Comment is required" });
+    }
+
+    const updatedAttendance = await updateAttendanceCommentService(attendance_id, comments);
+
+    return res.status(200).json({
+      success: true,
+      message: "Attendance comment updated successfully",
+      data: updatedAttendance,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 module.exports = {
   createCommitteeConroller,
   assignCommitteeController,
@@ -179,5 +296,10 @@ module.exports = {
   unassignCommitteeController,
   getAllCommitteeLeadersController,
   resetCommitteeLeaderPasswordController,
-  createAttendanceController
+  createAttendanceController,
+  getUserAttendanceController,
+  getCommitteeAttendanceController,
+  getAttendanceBySectorController,
+  getAttendanceReportController,
+  updateAttendanceCommentController
 };

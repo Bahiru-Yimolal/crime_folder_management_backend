@@ -34,9 +34,6 @@
  *               phone_number:
  *                 type: string
  *                 example: "0912345678"
- *               sector:
- *                 type: string
- *                 example: "techno"
  *               password:
  *                 type: string
  *                 example: "Password123!"
@@ -56,191 +53,6 @@
  *                   example: User registered successfully.
  *
  */
-
-/**
- * @swagger
- * /users/admin:
- *   post:
- *     summary: Register a new Admin
- *     tags: [User]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               first_name:
- *                 type: string
- *                 example: John
- *               last_name:
- *                 type: string
- *                 example: Doe
- *               email:
- *                 type: string
- *                 example: user@example.com
- *               phone_number:
- *                 type: string
- *                 example: "0912345678"
- *               password:
- *                 type: string
- *                 example: "Password123!"
- *     responses:
- *       201:
- *         description: User registered successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 user_id:
- *                   type: integer
- *                   example: 1
- *                 message:
- *                   type: string
- *                   example: User registered successfully.
- *
- */
-
-/**
- * @swagger
- * /users/head:
- *   post:
- *     summary: Register a new Head
- *     tags: [User]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               first_name:
- *                 type: string
- *                 example: John
- *               last_name:
- *                 type: string
- *                 example: Doe
- *               email:
- *                 type: string
- *                 example: user@example.com
- *               phone_number:
- *                 type: string
- *                 example: "0912345678"
- *               password:
- *                 type: string
- *                 example: "Password123!"
- *               sector:
- *                 type: string
- *                 example: "techno"
- *     responses:
- *       201:
- *         description: User registered successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 user_id:
- *                   type: integer
- *                   example: 1
- *                 message:
- *                   type: string
- *                   example: User registered successfully.
- *
- */
-
-/**
- * @swagger
- * /users/super:
- *   post:
- *     summary: Register a Super Admin
- *     tags: [User]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               first_name:
- *                 type: string
- *                 example: John
- *               last_name:
- *                 type: string
- *                 example: Doe
- *               email:
- *                 type: string
- *                 example: user@example.com
- *               phone_number:
- *                 type: string
- *                 example: "0912345678"
- *               password:
- *                 type: string
- *                 example: "Password123!"
- *     responses:
- *       201:
- *         description: User registered successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 user_id:
- *                   type: integer
- *                   example: 1
- *                 message:
- *                   type: string
- *                   example: User registered successfully.
- *
- */
-
-
-/**
- * @swagger
- * /users/we:
- *   post:
- *     summary: Register a new We
- *     tags: [User]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               first_name:
- *                 type: string
- *                 example: John
- *               last_name:
- *                 type: string
- *                 example: Doe
- *               email:
- *                 type: string
- *                 example: user@example.com
- *               phone_number:
- *                 type: string
- *                 example: "0912345678"
- *               password:
- *                 type: string
- *                 example: "Password123!"
- *     responses:
- *       201:
- *         description: User registered successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 user_id:
- *                   type: integer
- *                   example: 1
- *                 message:
- *                   type: string
- *                   example: User registered successfully.
- *
- */
-
 
 /**
  * @swagger
@@ -890,6 +702,73 @@
  *         description: Forbidden – user does not have access
  *       404:
  *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /users/userlist/{sectorName}:
+ *   get:
+ *     summary: Fetch all pending users within a given sector
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sectorName
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Name of the sector to filter users by
+ *         example: "Health"
+ *     responses:
+ *       200:
+ *         description: Successfully fetched pending users in the given sector
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Pending users fetched successfully for sector: Health"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       user_id:
+ *                         type: integer
+ *                         example: 1
+ *                       first_name:
+ *                         type: string
+ *                         example: "Bahiru"
+ *                       last_name:
+ *                         type: string
+ *                         example: "Yimolal"
+ *                       email:
+ *                         type: string
+ *                         example: "bahiru@gmail.com"
+ *                       phone_number:
+ *                         type: string
+ *                         example: "+251912345678"
+ *                       sector:
+ *                         type: string
+ *                         example: "Health"
+ *                       status:
+ *                         type: string
+ *                         example: "pending"
+ *                       role:
+ *                         type: string
+ *                         example: "user"
+ *       404:
+ *         description: No pending users found for the specified sector
+ *       400:
+ *         description: Missing or invalid sector name
  *       500:
  *         description: Internal server error
  */

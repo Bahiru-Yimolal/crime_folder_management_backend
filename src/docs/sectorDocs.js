@@ -2,8 +2,8 @@
  * @swagger
  * /sectors:
  *   post:
- *     summary: Create a new Sector
- *     tags: [Super Admin]
+ *     summary: Create a new Sector (Subcity Admin only)
+ *     tags: [Subcity Admin]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -12,15 +12,13 @@
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - name
  *             properties:
- *               sector_name:
+ *               name:
  *                 type: string
- *                 example: "Development Team"
- *                 description: Name of the group
- *               sector_leader_id:
- *                 type: integer
- *                 example: 2
- *                 description: ID of the user assigned as Sector leader
+ *                 example: "Education Sector"
+ *                 description: Name of the sector to create
  *     responses:
  *       201:
  *         description: Sector created successfully
@@ -29,191 +27,50 @@
  *             schema:
  *               type: object
  *               properties:
- *                 group_id:
- *                   type: integer
- *                   example: 1
- *                 group_name:
- *                   type: string
- *                   example: "Development Team"
- *                 group_leader_id:
- *                   type: integer
- *                   example: 2
+ *                 success:
+ *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
- *                   example: "Group created successfully."
+ *                   example: "Sector created successfully"
+ *                 sector:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                       example: "550e8400-e29b-41d4-a716-446655440000"
+ *                     name:
+ *                       type: string
+ *                       example: "Education Sector"
+ *                     level:
+ *                       type: string
+ *                       example: "SECTOR"
+ *                     parent_id:
+ *                       type: string
+ *                       format: uuid
+ *                       example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+ *       400:
+ *         description: Invalid input or sector already exists
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       500:
+ *         description: Internal server error
  */
 
 /**
  * @swagger
  * /sectors:
  *   get:
- *     summary: Retrieve a list of all Sectors
- *     tags: [Super Admin]
+ *     summary: List all sectors for the current Subcity (Subcity Admin only)
+ *     tags: [Subcity Admin]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: A list of Sector
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   group_id:
- *                     type: integer
- *                     example: 1
- *                   group_name:
- *                     type: string
- *                     example: "Development Team"
- *                   group_leader_id:
- *                     type: integer
- *                     example: 2
- *       500:
- *         description: Internal server error
- */
-
-/**
- * @swagger
- * /sectors/updateName/{sector_id}:
- *   patch:
- *     summary: Update Sector information
- *     tags: [Super Admin]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: sector_id
- *         schema:
- *           type: integer
- *         required: true
- *         description: The ID of the sector to update
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               sector_name:
- *                 type: string
- *                 example: "Updated Group Name"
- *     responses:
- *       200:
- *         description: Group updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 group_id:
- *                   type: integer
- *                   example: 1
- *                 group_name:
- *                   type: string
- *                   example: "Updated Group Name"
- *                 message:
- *                   type: string
- *                   example: "Group updated successfully."
- *       400:
- *         description: Bad request, invalid parameters
- *       404:
- *         description: Group not found
- *       500:
- *         description: Internal server error
- */
-
-/**
- * @swagger
- * /sectors/assign:
- *   patch:
- *     summary: Assign a new leader to a Sector
- *     tags: [Super Admin]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               sector_id:
- *                 type: integer
- *                 example: 1
- *               new_sector_leader_id:
- *                 type: integer
- *                 example: 5
- *     responses:
- *       200:
- *         description: Group leader assigned successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 group_id:
- *                   type: integer
- *                   example: 1
- *                 new_group_leader_id:
- *                   type: integer
- *                   example: 5
- *                 message:
- *                   type: string
- *                   example: "Group leader assigned successfully."
- */
-
-/**
- * @swagger
- * /sectors/unassign/{user_id}:
- *   patch:
- *     summary: Unassign a user by changing their status from assigned to pending
- *     tags: [Super Admin]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: user_id
- *         required: true
- *         schema:
- *           type: integer
- *         description: ID of the user to unassign
- *         example: 1
- *     responses:
- *       200:
- *         description: User status changed to pending successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: User status changed to pending successfully.
- */
-
-/**
- * @swagger
- * /sectors/resetPassword:
- *   patch:
- *     summary: Reset a 's password to the default
- *     tags: [Super Admin]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               sector_leader_id:
- *                 type: integer
- *                 example: 2
- *     responses:
- *       200:
- *         description: Password reset successfully
+ *         description: List of sectors
  *         content:
  *           application/json:
  *             schema:
@@ -222,55 +79,287 @@
  *                 success:
  *                   type: boolean
  *                   example: true
- *                 message:
- *                   type: string
- *                   example: Password reset successfully to default for user ID 2
- *       403:
- *         description: Access denied (only group leaders can reset passwords)
- *       404:
- *         description: Professional not found
- *       500:
- *         description: Internal server error
- */
-
-/**
- * @swagger
- * /sectors/allSectorLeaders:
- *   get:
- *     summary: Fetch all sector leaders in the same subcity
- *     tags: [Super Admin]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: A list of users in the same sector
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
+ *                 sectors:
  *                   type: array
  *                   items:
  *                     type: object
  *                     properties:
- *                       user_id:
- *                         type: integer
- *                         example: 1
- *                       first_name:
+ *                       id:
  *                         type: string
- *                         example: John
- *                       last_name:
+ *                         format: uuid
+ *                       name:
  *                         type: string
- *                         example: Doe
- *                       phone_number:
+ *                         example: "Education Sector"
+ *                       level:
  *                         type: string
- *                         example: "0912345678"
+ *                         example: "SECTOR"
+ *                       parent_id:
+ *                         type: string
+ *                         format: uuid
+ *                       UserAssignments:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: string
+ *                               format: uuid
+ *                             User:
+ *                               type: object
+ *                               properties:
+ *                                 first_name:
+ *                                   type: string
+ *                                 last_name:
+ *                                   type: string
  *       401:
- *         description: Unauthorized, invalid token
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
  *       500:
- *         description: Server error
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /sectors/{id}:
+ *   put:
+ *     summary: Update sector information (Subcity Admin only)
+ *     tags: [Subcity Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: ID of the sector to update
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "Health Sector"
+ *     responses:
+ *       200:
+ *         description: Sector updated successfully
+ *       400:
+ *         description: Invalid input or duplicate name
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Sector not found
+ */
+
+/**
+ * @swagger
+ * /sectors/{id}:
+ *   delete:
+ *     summary: Delete a sector (Subcity Admin only)
+ *     tags: [Subcity Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: ID of the sector to delete
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Sector deleted successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Sector not found
+ */
+
+/**
+ * @swagger
+ * /sectors/assign/sector-admin:
+ *   post:
+ *     summary: Assign a Sector Admin to a Sector (Subcity Admin only)
+ *     tags: [Subcity Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - sectorId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID of the user to be assigned
+ *               sectorId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID of the sector
+ *               permissions:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       201:
+ *         description: Sector Admin assigned successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: User or sector not found
+ */
+
+/**
+ * @swagger
+ * /sectors/assign/users:
+ *   post:
+ *     summary: Create/Assign a User to the Sector (Subcity Admin only)
+ *     tags: [Subcity Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - user_id
+ *               - role
+ *             properties:
+ *               user_id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID of the user to assign
+ *               role:
+ *                 type: string
+ *                 description: Role name to assign (e.g., SECTOR_OFFICER)
+ *               permissions:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Optional specific permissions
+ *     responses:
+ *       201:
+ *         description: User assigned successfully
+ *       400:
+ *         description: Invalid input
+ *       403:
+ *         description: Forbidden
+ *   put:
+ *     summary: Update a Sector User's Role/Permissions (Subcity Admin only)
+ *     tags: [Subcity Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - user_id
+ *             properties:
+ *               user_id:
+ *                 type: string
+ *                 format: uuid
+ *               role:
+ *                 type: string
+ *               permissions:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: User updated successfully
+ *       404:
+ *         description: User not found or not in sector
+ */
+
+/**
+ * @swagger
+ * /sectors/assign/own-users:
+ *   post:
+ *     summary: Create/Assign a User to the Sector (Sector Admin only - Self Management)
+ *     tags: [Sector Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - user_id
+ *               - role
+ *             properties:
+ *               user_id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID of the user to assign
+ *               role:
+ *                 type: string
+ *                 description: Role name to assign (e.g., SECTOR_OFFICER)
+ *               permissions:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Optional specific permissions
+ *     responses:
+ *       201:
+ *         description: User assigned successfully
+ *       400:
+ *         description: Invalid input
+ *       403:
+ *         description: Forbidden
+ *   put:
+ *     summary: Update a Sector User's Role/Permissions (Sector Admin only - Self Management)
+ *     tags: [Sector Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - user_id
+ *             properties:
+ *               user_id:
+ *                 type: string
+ *                 format: uuid
+ *               role:
+ *                 type: string
+ *               permissions:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: User updated successfully
+ *       404:
+ *         description: User not found or not in sector
  */

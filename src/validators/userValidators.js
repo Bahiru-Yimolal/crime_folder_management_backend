@@ -28,7 +28,6 @@ const userSchema = Joi.object({
       "string.length": "Phone number must be exactly 10 digits long.",
       "string.pattern.base": "Phone number must contain only numbers.",
     }),
-  sector: Joi.string().required(),
   password: Joi.string()
     .min(8) // Minimum 8 characters
     .pattern(new RegExp("(?=.*[a-z])")) // At least one lowercase letter

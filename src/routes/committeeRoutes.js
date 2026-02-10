@@ -8,6 +8,11 @@ const {
   getAllCommitteeLeadersController,
   resetCommitteeLeaderPasswordController,
   createAttendanceController,
+  getUserAttendanceController,
+  getCommitteeAttendanceController,
+  getAttendanceBySectorController,
+  getAttendanceReportController,
+  updateAttendanceCommentController
 } = require("../controllers/committeeControllers");
 const {
   validateCommitteInput,
@@ -30,12 +35,32 @@ router
     createCommitteeConroller
   );
 router
+  .route("/user/:user_id/:page/:limit")
+  .get(protect, getUserAttendanceController);
+router
+  .route("/committee/:committee_id/:page/:limit")
+  .get(protect, getCommitteeAttendanceController);
+
+router
+  .route("/sector/:page/:limit")
+  .get(protect, getAttendanceBySectorController);
+
+router
   .route("/create-attencance")
   .post(
     protect,
     validateAttendanceInput,
     createAttendanceController
   );
+
+router
+  .route("/attendance/comment/:attendance_id")
+  .patch(protect, updateAttendanceCommentController);
+
+router
+  .route("/attendance/report")
+  .post(protect, getAttendanceReportController);
+
 router
   .route("/assign/")
   .patch(
@@ -64,5 +89,6 @@ router
 router
   .route("/allCommitteeLeaders")
   .get(protect, verifySubcityLeader, getAllCommitteeLeadersController);
+
 
 module.exports = router;

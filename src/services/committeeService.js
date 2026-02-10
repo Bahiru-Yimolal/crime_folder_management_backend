@@ -270,6 +270,21 @@ const createAttendanceService = async (data) => {
     throw new AppError("user_id and committee_id are required", 400);
   }
 
+    // ✅ Treat committee_id as committee_leader_id
+  const committee_leader_id = committee_id;
+
+
+  // ✅ 1. Find the real committee_id using committee_leader_id
+  const committee = await Committee.findOne({
+    where: { committee_leader_id },
+  });
+
+  if (!committee) {
+    throw new AppError("School not found for this Director", 404);
+  }
+
+  const realCommitteeId = committee.committee_id;
+
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const todayEnd = new Date();
@@ -278,13 +293,13 @@ const createAttendanceService = async (data) => {
   const existing = await Attendance.findOne({
     where: {
       user_id,
-      committee_id,
+      committee_id: realCommitteeId,
       createdAt: { [Op.between]: [todayStart, todayEnd] },
     },
   });
 
-  const committee = await Committee.findByPk(committee_id);
-  if (!committee) throw new AppError("Committee not found", 404);
+  // const committee = await Committee.findByPk(committee_id);
+  // if (!committee) throw new AppError("Committee not found", 404);
 
   // Parse committee location (assumed stored as "lat,lon")
   const { latitude: committeeLat, longitude: committeeLon } = committee.school_location;
@@ -299,7 +314,7 @@ const createAttendanceService = async (data) => {
         committeeLat,
         committeeLon
       );
-      const THRESHOLD_METERS = 200; // Customize this threshold
+      const THRESHOLD_METERS = 500; // Customize this threshold
       if (distance > THRESHOLD_METERS) {
         throw new AppError("Incorrect location — too far from School site", 400);
       }
@@ -307,14 +322,18 @@ const createAttendanceService = async (data) => {
 
     const attendance = await Attendance.create({
       user_id,
-      committee_id,
+      committee_id: realCommitteeId,
       check_in_time: check_in_time || new Date(),
       comments,
       device_info,
       location: JSON.stringify(location),
     });
 
-    return attendance;
+  return {
+      message: "Check-in successful",
+      attendance,
+      committee,
+    };
   }
 
   // CASE C — Check-out
@@ -334,7 +353,11 @@ const createAttendanceService = async (data) => {
     existing.location = location ? JSON.stringify(location) : existing.location;
     await existing.save();
 
-    return existing;
+    return {
+      message: "Check-out successful",
+      attendance: existing,
+      committee,
+    };
   }
 
   // If user tries to check in again today
@@ -347,6 +370,265 @@ const createAttendanceService = async (data) => {
 };
 
 
+const getUserAttendanceService = async (user_id, { page, limit }) => {
+  const user = await User.findByPk(user_id);
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  const offset = (page - 1) * limit;
+
+  const { count, rows } = await Attendance.findAndCountAll({
+    where: { user_id },
+    include: [
+      {
+        model: User,
+        attributes: [
+          "user_id",
+          "first_name",
+          "last_name",
+          "email",
+          "phone_number",
+          "status",
+          "role",
+          "sector",
+        ],
+      },
+      {
+        model: Committee,
+        attributes: [
+          "committee_id",
+          "committee_name",
+          "school_address",
+          "school_type",
+          "school_location",
+        ],
+      },
+    ],
+    order: [["createdAt", "DESC"]],
+    limit,
+    offset,
+  });
+
+  const totalPages = Math.ceil(count / limit);
+
+  return {
+    success: true,
+    totalRecords: count,
+    currentPage: page,
+    totalPages,
+    limit,
+    data: rows,
+  };
+};
+
+// 📘 Committee Attendance Service (Paginated)
+const getCommitteeAttendanceService = async (committee_id, page = 1, limit = 10) => {
+
+      // ✅ Treat committee_id as committee_leader_id
+  const committee_leader_id = committee_id;
+
+
+  // ✅ 1. Find the real committee_id using committee_leader_id
+  const committee = await Committee.findOne({
+    where: { committee_leader_id },
+  });
+
+  if (!committee) {
+    throw new AppError("School not found for this Director", 404);
+  }
+
+  const realCommitteeId = committee.committee_id;
+
+
+  const offset = (page - 1) * limit;
+
+  const { count, rows } = await Attendance.findAndCountAll({
+    where: { committee_id :realCommitteeId },
+    include: [
+      {
+        model: User,
+        attributes: [
+          "user_id",
+          "first_name",
+          "last_name",
+          "email",
+          "phone_number",
+          "status",
+          "role",
+          "sector",
+        ],
+      },
+      {
+        model: Committee,
+        attributes: [
+          "committee_id",
+          "committee_name",
+          "school_address",
+          "school_type",
+          "school_location",
+        ],
+      },
+    ],
+    order: [["createdAt", "DESC"]],
+    offset,
+    limit: parseInt(limit),
+  });
+
+  return {
+    pagination: {
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(count / limit),
+      totalRecords: count,
+    },
+    data: rows,
+  };
+};
+
+const getAttendanceBySectorService = async (sector_id, page = 1, limit = 10) => {
+  const committees = await Committee.findAll({
+    where: { sector_id },
+    attributes: ["committee_id"],
+  });
+
+  if (!committees.length) throw new AppError("No committees found for this sector", 404);
+
+  const committeeIds = committees.map((c) => c.committee_id);
+  const offset = (page - 1) * limit;
+
+  const { count, rows } = await Attendance.findAndCountAll({
+    where: { committee_id: committeeIds },
+    include: [
+      {
+        model: User,
+        attributes: [
+          "user_id",
+          "first_name",
+          "last_name",
+          "email",
+          "phone_number",
+          "role",
+          "sector",
+        ],
+      },
+      {
+        model: Committee,
+        attributes: ["committee_id", "committee_name", "school_address", "school_location"],
+      },
+    ],
+    order: [["createdAt", "DESC"]],
+    offset,
+    limit: parseInt(limit),
+  });
+
+  // Calculate totalHours for each attendance record
+  const dataWithHours = rows.map((attendance) => {
+    let totalHours = 0;
+
+    if (attendance.check_in_time && attendance.check_out_time) {
+      const diffMs = new Date(attendance.check_out_time) - new Date(attendance.check_in_time);
+      totalHours = diffMs / (1000 * 60 * 60); // convert milliseconds to hours
+      if (totalHours > 8) totalHours = 8; // cap at 8 hours
+    }
+
+    return {
+      ...attendance.toJSON(), // convert Sequelize instance to plain object
+      totalHours,
+    };
+  });
+
+  return {
+    pagination: {
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(count / limit),
+      totalRecords: count,
+    },
+    data: dataWithHours,
+  };
+};
+
+
+const getAttendanceReportService = async ({
+  committee_name,
+  first_name,
+  last_name,
+  startDate,
+  endDate,
+  page = 1,
+  limit = 10,
+  sector_id,
+}) => {
+  const offset = (page - 1) * limit;
+
+  // Build dynamic where clause for Attendance
+  const attendanceWhere = {};
+  if (startDate && endDate) {
+    attendanceWhere.createdAt = {
+      [Op.between]: [new Date(startDate), new Date(endDate)],
+    };
+  }
+
+  // Restrict to sector if needed
+  const committeeWhere = {};
+  if (sector_id) {
+    committeeWhere.sector_id = sector_id;
+  }
+  if (committee_name) {
+    committeeWhere.committee_name = { [Op.iLike]: `%${committee_name}%` };
+  }
+
+  const userWhere = {};
+  if (first_name) {
+    userWhere.first_name = { [Op.iLike]: `%${first_name}%` };
+  }
+  if (last_name) {
+    userWhere.last_name = { [Op.iLike]: `%${last_name}%` };
+  }
+
+  const { count, rows } = await Attendance.findAndCountAll({
+    where: attendanceWhere,
+    include: [
+      { model: User, where: userWhere, attributes: ["user_id", "first_name", "last_name", "email", "phone_number", "role", "sector"] },
+      { model: Committee, where: committeeWhere, attributes: ["committee_id", "committee_name", "school_address", "school_location"] },
+    ],
+    order: [["createdAt", "DESC"]],
+    offset,
+    limit: parseInt(limit),
+  });
+
+  // Calculate totalHours for each attendance
+  const dataWithHours = rows.map((attendance) => {
+    let totalHours = 0;
+    if (attendance.check_in_time && attendance.check_out_time) {
+      const diffMs = new Date(attendance.check_out_time) - new Date(attendance.check_in_time);
+      totalHours = diffMs / (1000 * 60 * 60);
+      if (totalHours > 8) totalHours = 8;
+    }
+    return { ...attendance.toJSON(), totalHours };
+  });
+
+  return {
+    pagination: {
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(count / limit),
+      totalRecords: count,
+    },
+    data: dataWithHours,
+  };
+};
+
+const updateAttendanceCommentService = async (attendance_id, comments) => {
+  const attendance = await Attendance.findByPk(attendance_id);
+
+  if (!attendance) {
+    throw new AppError("Attendance record not found", 404);
+  }
+
+  attendance.comments = comments;
+  await attendance.save();
+
+  return attendance;
+};
 
 module.exports = {
   createCommitteeService,
@@ -356,5 +638,10 @@ module.exports = {
   unassignCommitteeService,
   getAllCommitteeLeadersService,
   resetCommitteeLeaderPasswordService,
-  createAttendanceService
+  createAttendanceService,
+  getUserAttendanceService,
+  getCommitteeAttendanceService,
+  getAttendanceBySectorService,
+  getAttendanceReportService,
+  updateAttendanceCommentService
 };

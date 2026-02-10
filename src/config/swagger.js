@@ -5,9 +5,9 @@ const swaggerUi = require("swagger-ui-express");
 const swaggerDefinition = {
   openapi: "3.0.0",
   info: {
-    title: "Attendance Management System",
+    title: "Crime Management System",
     version: "1.0.0",
-    description: "API documentation for Attendance Management System",
+    description: "API documentation for Crime Management System",
   },
   servers: [
     {
