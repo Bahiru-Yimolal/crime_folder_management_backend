@@ -655,11 +655,152 @@ const deleteServiceLogic = async (id, actor) => {
   }
 };
 
+/**
+ * List all services assigned to a specific group leader with pagination
+ */
+const listAssignedServices = async (userId, { page = 1, limit = 10 }) => {
+  try {
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await ServiceAssignment.findAndCountAll({
+      where: { group_leader_id: userId, is_active: true },
+      include: [
+        {
+          model: Service,
+          include: [
+            {
+              model: AdministrativeUnit,
+              attributes: ["name", "level"],
+            },
+          ],
+        },
+      ],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [["createdAt", "DESC"]],
+    });
+
+    return {
+      totalItems: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: parseInt(page),
+      services: rows,
+    };
+  } catch (error) {
+    throw new AppError("Database error: Unable to fetch assigned services", 500);
+  }
+};
+
+/**
+ * Citizen initiates a service request
+ */
+const createServiceRequest = async ({ service_id, user_phone }) => {
+  try {
+    // 1. Verify service exists
+    const service = await Service.findByPk(service_id);
+    if (!service) {
+      throw new AppError("The requested service does not exist", 404);
+    }
+
+    // 2. Check for active/pending requests from this phone for this service
+    const existingRequest = await ServiceRequest.findOne({
+      where: {
+        service_id,
+        user_phone,
+        status: { [Op.in]: ["PENDING", "CONFIRMED", "IN_PROGRESS"] },
+      },
+    });
+
+    if (existingRequest) {
+      throw new AppError("You already have an active request for this service. Please wait for the current one to be processed.", 400);
+    }
+
+    // 3. Create the request
+    const request = await ServiceRequest.create({
+      service_id,
+      user_phone,
+      status: "PENDING",
+    });
+
+    return request;
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    throw new AppError("Internal server error during request initiation", 500);
+  }
+};
+
+/**
+ * List all service requests for services managed by a specific group leader
+ */
+const listAssignedRequests = async (userId, { page = 1, limit = 10 }) => {
+  try {
+    const offset = (page - 1) * limit;
+
+    // 1. Get all service IDs assigned to this GL
+    const assignments = await ServiceAssignment.findAll({
+      where: { group_leader_id: userId, is_active: true },
+      attributes: ["service_id"],
+    });
+
+    const assignedServiceIds = assignments.map((a) => a.service_id);
+
+    if (assignedServiceIds.length === 0) {
+      return {
+        totalItems: 0,
+        totalPages: 0,
+        currentPage: parseInt(page),
+        requests: [],
+      };
+    }
+
+    // 2. Fetch requests for those services
+    const { count, rows } = await ServiceRequest.findAndCountAll({
+      where: { service_id: { [Op.in]: assignedServiceIds } },
+      include: [
+        {
+          model: Service,
+          attributes: ["type", "place", "duration"],
+        },
+      ],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [["createdAt", "DESC"]],
+    });
+
+    return {
+      totalItems: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: parseInt(page),
+      requests: rows,
+    };
+  } catch (error) {
+    throw new AppError("Database error: Unable to fetch assigned requests", 500);
+  }
+};
+
+/**
+ * Public: Get services available in a specific Administrative Unit
+ */
+const getServicesByUnitService = async (unitId) => {
+  try {
+    const services = await Service.findAll({
+      where: { unit_id: unitId },
+      attributes: ["id", "type", "place", "duration", "quality_standard", "delivery_mode", "preconditions"],
+      order: [["type", "ASC"]],
+    });
+
+    return services;
+  } catch (error) {
+    throw new AppError("Database error: Unable to fetch services for this unit", 500);
+  }
+};
+
+
 module.exports = {
   createCityService,
   listCitiesService,
   updateCityService,
-  deleteCityService, // This is the unit delete
+  deleteCityService, // Unit delete
   assignCityAdminService,
   createEthiopiaLevelUserService,
   updateUserPermissions,
@@ -671,4 +812,8 @@ module.exports = {
   updateService,
   listServices,
   deleteServiceLogic,
+  listAssignedServices,
+  createServiceRequest,
+  listAssignedRequests,
+  getServicesByUnitService,
 };

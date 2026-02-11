@@ -16,6 +16,10 @@ const {
   updateServiceController,
   listServicesController,
   deleteServiceController,
+  listAssignedServicesController,
+  createServiceRequestController,
+  listAssignedRequestsController,
+  getPublicServicesController,
 } = require("../controllers/cityControllers");
 const {
   validateCityInput,
@@ -25,6 +29,7 @@ const {
   validateUpdatePermissionsInput,
   validateCreateServiceInput,
   validateUpdateServiceInput,
+  validateCreateServiceRequestInput,
 } = require("../validators/cityValidators");
 
 const { protect, assignmentMiddleware, levelGuard, permissionMiddleware } = require("../middlewares/authMiddleware");
@@ -138,6 +143,34 @@ router.get(
   protect,
   assignmentMiddleware,
   listServicesController
+);
+
+// Public Service Discovery (for QR scanning start)
+router.get(
+  "/services/public/:unitId",
+  getPublicServicesController
+);
+
+
+router.get(
+  "/services/assigned",
+  protect,
+  assignmentMiddleware,
+  listAssignedServicesController
+);
+
+// Citizen Service Request Initiation (Public)
+router.post(
+  "/services/request",
+  validateCreateServiceRequestInput,
+  createServiceRequestController
+);
+
+router.get(
+  "/services/requests/assigned",
+  protect,
+  assignmentMiddleware,
+  listAssignedRequestsController
 );
 
 router.post(

@@ -1156,3 +1156,164 @@
  *         description: Service not found
  */
 
+/**
+ * @swagger
+ * /cities/services/assigned:
+ *   get:
+ *     summary: List services assigned to the authenticated Group Leader (GL only)
+ *     description: >
+ *       Retrieves all service catalog items currently assigned to the authenticated Group Leader.
+ *       Results are paginated.
+ *     tags: [Service Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: Paginated list of assigned services retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /cities/services/public/{unitId}:
+ *   get:
+ *     summary: Discover services available in a specific Administrative Unit (Public)
+ *     description: >
+ *       Retrieves all service catalog items created within a specific administrative unit.
+ *       This is used by citizens after scanning a QR code to see what services they can request. No authentication required.
+ *     tags: [Citizen Operations]
+ *     parameters:
+ *       - in: path
+ *         name: unitId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID of the Administrative Unit
+ *     responses:
+ *       200:
+ *         description: List of available services
+ *       404:
+ *         description: Unit not found or no services available
+ */
+
+/**
+ * @swagger
+ * /cities/services/request:
+ *   post:
+ *     summary: Initiate a service request (Citizen/Public)
+ *     description: >
+ *       Allows a citizen to initiate a service request by scanning a QR code.
+ *       Requires the service ID and the citizen's phone number.
+ *       Prevents duplicate active requests from the same phone for the same service.
+ *     tags: [Citizen Operations]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - service_id
+ *               - user_phone
+ *             properties:
+ *               service_id:
+ *                 type: string
+ *                 format: uuid
+ *                 example: "550e8400-e29b-41d4-a716-446655440000"
+ *               user_phone:
+ *                 type: string
+ *                 example: "0911223344"
+ *     responses:
+ *       201:
+ *         description: Service request submitted successfully
+ *       400:
+ *         description: Invalid input or duplicate active request
+ *       404:
+ *         description: Service not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /cities/services/requests/assigned:
+ *   get:
+ *     summary: List all service requests for services managed by the authenticated Group Leader (GL only)
+ *     description: >
+ *       Retrieves all service requests (PENDING, IN_PROGRESS, etc.) for the service catalog items 
+ *       currently managed by the authenticated Group Leader. Results are paginated.
+ *     tags: [Service Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: Paginated list of assigned requests retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     totalItems:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
+ *                     currentPage:
+ *                       type: integer
+ *                     requests:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           status:
+ *                             type: string
+ *                           user_phone:
+ *                             type: string
+ *                           Service:
+ *                             type: object
+ *                             properties:
+ *                               type:
+ *                                 type: string
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */

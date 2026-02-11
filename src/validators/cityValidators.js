@@ -212,6 +212,33 @@ const validateUpdateServiceInput = (req, res, next) => {
   next();
 };
 
+const createServiceRequestSchema = Joi.object({
+  service_id: Joi.string().guid({ version: "uuidv4" }).required().messages({
+    "string.empty": "Service ID is required",
+    "string.guid": "Invalid Service ID format",
+  }),
+  user_phone: Joi.string()
+    .pattern(/^[0-9+]{10,15}$/)
+    .required()
+    .messages({
+      "string.empty": "Phone number is required",
+      "string.pattern.base": "Invalid phone number format",
+    }),
+});
+
+const validateCreateServiceRequestInput = (req, res, next) => {
+  const { error } = createServiceRequestSchema.validate(req.body);
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.details[0].message,
+    });
+  }
+
+  next();
+};
+
 module.exports = {
   validateCityInput,
   validateAssignUserInput,
@@ -220,4 +247,5 @@ module.exports = {
   validateUpdatePermissionsInput,
   validateCreateServiceInput,
   validateUpdateServiceInput,
+  validateCreateServiceRequestInput,
 };

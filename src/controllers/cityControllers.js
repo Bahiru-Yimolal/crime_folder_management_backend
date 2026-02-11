@@ -15,6 +15,10 @@ const {
   updateService,
   listServices,
   deleteServiceLogic,
+  listAssignedServices,
+  createServiceRequest,
+  listAssignedRequests,
+  getServicesByUnitService,
   getPersonnelByRoleService } = require("../services/cityService");
 
 
@@ -337,6 +341,74 @@ const deleteServiceController = async (req, res, next) => {
   }
 };
 
+const listAssignedServicesController = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { page, limit } = req.query;
+
+    const result = await listAssignedServices(userId, {
+      page: parseInt(page) || 1,
+      limit: parseInt(limit) || 10,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const createServiceRequestController = async (req, res, next) => {
+  try {
+    const { service_id, user_phone } = req.body;
+    const request = await createServiceRequest({ service_id, user_phone });
+
+    res.status(201).json({
+      success: true,
+      message: "Service request submitted successfully",
+      data: request,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const listAssignedRequestsController = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { page, limit } = req.query;
+
+    const result = await listAssignedRequests(userId, {
+      page: parseInt(page) || 1,
+      limit: parseInt(limit) || 10,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getPublicServicesController = async (req, res, next) => {
+  try {
+    const { unitId } = req.params;
+    const services = await getServicesByUnitService(unitId);
+
+    res.status(200).json({
+      success: true,
+      data: services,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 module.exports = {
   createCityController,
   listCitiesController,
@@ -354,4 +426,8 @@ module.exports = {
   updateServiceController,
   listServicesController,
   deleteServiceController,
-};
+  listAssignedServicesController,
+  createServiceRequestController,
+  listAssignedRequestsController,
+  getPublicServicesController,
+  };
