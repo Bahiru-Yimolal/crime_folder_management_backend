@@ -320,7 +320,7 @@ const citizenRequestsQuerySchema = Joi.object({
     .pattern(/^[0-9+]{10,15}$/)
     .required()
     .messages({
-      "string.empty": "Phone number is required",
+      "string.empty": "Phone-number is required",
       "string.pattern.base": "Invalid phone number format",
       "any.required": "Phone number is required",
     }),
