@@ -20,8 +20,11 @@ const {
   createServiceRequestController,
   listAssignedRequestsController,
   getPublicServicesController,
+  listCitizenRequestsController,
   officerCompleteTaskController,
   citizenCompleteTaskController,
+  rejectServiceRequestController,
+  assignRequestToOfficerController,
 } = require("../controllers/cityControllers");
 const {
   validateCityInput,
@@ -32,6 +35,10 @@ const {
   validateCreateServiceInput,
   validateUpdateServiceInput,
   validateCreateServiceRequestInput,
+  validateRejectServiceRequestInput,
+  validateAssignRequestToOfficerInput,
+  validateAssignedRequestsQuery,
+  validateCitizenRequestsQuery,
 } = require("../validators/cityValidators");
 
 const { protect, assignmentMiddleware, levelGuard, permissionMiddleware } = require("../middlewares/authMiddleware");
@@ -161,6 +168,12 @@ router.get(
   listAssignedServicesController
 );
 
+router.get(
+  "/services/requests/citizen",
+  validateCitizenRequestsQuery,
+  listCitizenRequestsController
+);
+
 // Citizen Service Request Initiation (Public)
 router.post(
   "/services/request",
@@ -172,6 +185,7 @@ router.get(
   "/services/requests/assigned",
   protect,
   assignmentMiddleware,
+  validateAssignedRequestsQuery,
   listAssignedRequestsController
 );
 
@@ -187,6 +201,22 @@ router.patch(
   "/services/requests/:id/citizen-complete",
   validateCreateServiceRequestInput, // Reusing phone validator
   citizenCompleteTaskController
+);
+
+router.patch(
+  "/services/requests/:id/reject",
+  protect,
+  assignmentMiddleware,
+  validateRejectServiceRequestInput,
+  rejectServiceRequestController
+);
+
+router.patch(
+  "/services/requests/:id/assign",
+  protect,
+  assignmentMiddleware,
+  validateAssignRequestToOfficerInput,
+  assignRequestToOfficerController
 );
 
 router.post(

@@ -21,6 +21,9 @@ const {
   getServicesByUnitService,
   officerCompleteTask,
   citizenCompleteTask,
+  rejectServiceRequest,
+  assignRequestToOfficer,
+  listCitizenRequests,
   getPersonnelByRoleService } = require("../services/cityService");
 
 
@@ -254,7 +257,7 @@ const createServiceController = async (req, res, next) => {
       preconditions,
       groupLeaderIds,
       paymentAmount,
-      completion_metric,  
+      completion_metric,
     } = req.body;
 
     const result = await createService({
@@ -388,11 +391,13 @@ const createServiceRequestController = async (req, res, next) => {
 const listAssignedRequestsController = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { page, limit } = req.query;
+    const roleName = req.user.role.name;
+    const { page, limit, status } = req.query;
 
-    const result = await listAssignedRequests(userId, {
+    const result = await listAssignedRequests(userId, roleName, {
       page: parseInt(page) || 1,
       limit: parseInt(limit) || 10,
+      status,
     });
 
     res.status(200).json({
@@ -451,6 +456,61 @@ const citizenCompleteTaskController = async (req, res, next) => {
   }
 };
 
+const rejectServiceRequestController = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rejection_reason } = req.body;
+    const userId = req.user.id;
+
+    const request = await rejectServiceRequest(id, userId, rejection_reason);
+
+    res.status(200).json({
+      success: true,
+      message: "Service request rejected successfully",
+      data: request,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const assignRequestToOfficerController = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { officer_id } = req.body;
+    const userId = req.user.id; // Group Leader
+
+    const request = await assignRequestToOfficer(id, userId, officer_id);
+
+    res.status(200).json({
+      success: true,
+      message: "Task assigned to officer successfully",
+      data: request,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const listCitizenRequestsController = async (req, res, next) => {
+  try {
+    const { phone, page, limit, status } = req.query;
+
+    const result = await listCitizenRequests(phone, {
+      page: parseInt(page) || 1,
+      limit: parseInt(limit) || 10,
+      status,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createCityController,
   listCitiesController,
@@ -474,4 +534,7 @@ module.exports = {
   getPublicServicesController,
   officerCompleteTaskController,
   citizenCompleteTaskController,
+  rejectServiceRequestController,
+  assignRequestToOfficerController,
+  listCitizenRequestsController,
 };

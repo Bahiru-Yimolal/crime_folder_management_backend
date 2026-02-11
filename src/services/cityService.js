@@ -740,19 +740,38 @@ const createServiceRequest = async ({ service_id, user_phone }) => {
 /**
  * List all service requests for services managed by a specific group leader
  */
-const listAssignedRequests = async (userId, { page = 1, limit = 10 }) => {
+const listAssignedRequests = async (userId, roleName, { page = 1, limit = 10, status }) => {
   try {
     const offset = (page - 1) * limit;
+    let whereClause = {};
 
-    // 1. Get all service IDs assigned to this GL
-    const assignments = await ServiceAssignment.findAll({
-      where: { group_leader_id: userId, is_active: true },
-      attributes: ["service_id"],
-    });
+    if (status) {
+      whereClause.status = status;
+    }
 
-    const assignedServiceIds = assignments.map((a) => a.service_id);
+    if (roleName === "GROUP_LEADER") {
+      // 1. Get all service IDs assigned to this GL
+      const assignments = await ServiceAssignment.findAll({
+        where: { group_leader_id: userId, is_active: true },
+        attributes: ["service_id"],
+      });
 
-    if (assignedServiceIds.length === 0) {
+      const assignedServiceIds = assignments.map((a) => a.service_id);
+
+      if (assignedServiceIds.length === 0) {
+        return {
+          totalItems: 0,
+          totalPages: 0,
+          currentPage: parseInt(page),
+          requests: [],
+        };
+      }
+      whereClause.service_id = { [Op.in]: assignedServiceIds };
+    } else if (roleName === "OFFICER") {
+      // 2. Officers see only their specifically assigned requests
+      whereClause.officer_id = userId;
+    } else {
+      // Fallback for other roles
       return {
         totalItems: 0,
         totalPages: 0,
@@ -761,9 +780,9 @@ const listAssignedRequests = async (userId, { page = 1, limit = 10 }) => {
       };
     }
 
-    // 2. Fetch requests for those services
+    // Fetch requests logic
     const { count, rows } = await ServiceRequest.findAndCountAll({
-      where: { service_id: { [Op.in]: assignedServiceIds } },
+      where: whereClause,
       include: [
         {
           model: Service,
@@ -791,14 +810,26 @@ const listAssignedRequests = async (userId, { page = 1, limit = 10 }) => {
  */
 const getServicesByUnitService = async (unitId) => {
   try {
+    const unit = await AdministrativeUnit.findByPk(unitId, {
+      attributes: ["id", "name", "level"],
+    });
+
+    if (!unit) {
+      throw new AppError("Administrative unit not found", 404);
+    }
+
     const services = await Service.findAll({
       where: { unit_id: unitId },
-      attributes: ["id", "type", "place", "duration", "quality_standard", "delivery_mode", "preconditions"],
+      attributes: ["id", "type", "place", "duration", "quality_standard", "delivery_mode", "preconditions", "paymentAmount"],
       order: [["type", "ASC"]],
     });
 
-    return services;
+    return {
+      unit,
+      services,
+    };
   } catch (error) {
+    if (error instanceof AppError) throw error;
     throw new AppError("Database error: Unable to fetch services for this unit", 500);
   }
 };
@@ -849,8 +880,18 @@ const officerCompleteTask = async (requestId, userId) => {
     }
 
     // Verify ownership/assignment
-    if (request.officer_id !== userId && request.group_leader_id !== userId) {
-      throw new AppError("You are not assigned to this task", 403);
+    let isAuthorized = request.officer_id === userId;
+
+    if (!isAuthorized) {
+      const assignment = await ServiceAssignment.findOne({
+        where: { service_id: request.service_id, group_leader_id: userId, is_active: true },
+        transaction,
+      });
+      if (assignment) isAuthorized = true;
+    }
+
+    if (!isAuthorized) {
+      throw new AppError("You are not authorized to complete this task", 403);
     }
 
     await request.update({
@@ -898,6 +939,140 @@ const citizenCompleteTask = async (requestId, phone) => {
   }
 };
 
+/**
+ * Group Leader rejects a service request
+ */
+const rejectServiceRequest = async (requestId, userId, rejectionReason) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const request = await ServiceRequest.findByPk(requestId, {
+      include: [{ model: Service }],
+      transaction,
+    });
+
+    if (!request) throw new AppError("Service request not found", 404);
+
+    // Security: Verify if the user is a GL assigned to this service
+    const assignment = await ServiceAssignment.findOne({
+      where: { service_id: request.service_id, group_leader_id: userId, is_active: true },
+      transaction,
+    });
+
+    if (!assignment) {
+      throw new AppError("Unauthorized: You are not assigned to manage this service", 403);
+    }
+
+    if (!["PENDING", "CONFIRMED"].includes(request.status)) {
+      throw new AppError(`Cannot reject a request in ${request.status} status`, 400);
+    }
+
+    await request.update({
+      status: "REJECTED",
+      rejection_reason: rejectionReason,
+    }, { transaction });
+
+    await transaction.commit();
+    return request;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+};
+
+/**
+ * Group Leader assigns a request to an Officer
+ */
+const assignRequestToOfficer = async (requestId, userId, officerId) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const request = await ServiceRequest.findByPk(requestId, {
+      include: [{ model: Service }],
+      transaction,
+    });
+
+    if (!request) throw new AppError("Service request not found", 404);
+
+    // 1. Security: Verify if the actor (GL) is assigned to this service
+    const assignment = await ServiceAssignment.findOne({
+      where: { service_id: request.service_id, group_leader_id: userId, is_active: true },
+      transaction,
+    });
+
+    if (!assignment) {
+      throw new AppError("Unauthorized: You are not assigned to manage this service", 403);
+    }
+
+    // 2. Verify: If officerId is provided, check if they are an OFFICER in the same unit
+    if (officerId) {
+      const officerAssignment = await UserAssignment.findOne({
+        where: { user_id: officerId, unit_id: request.Service.unit_id },
+        include: [{ model: Role, where: { name: "OFFICER" } }],
+        transaction,
+      });
+
+      if (!officerAssignment) {
+        throw new AppError("Invalid Officer: The provided user is not an officer in this unit", 400);
+      }
+    }
+
+    // 3. Update Request: Assign officer and transition status if needed
+    const updates = { officer_id: officerId };
+
+    // If starting for the first time
+    if (["PENDING", "CONFIRMED"].includes(request.status)) {
+      const startTime = new Date();
+      updates.status = "IN_PROGRESS";
+      updates.group_leader_id = userId; // The GL who acknowledged it
+      updates.start_time = startTime;
+      updates.expected_completion = new Date(startTime.getTime() + request.Service.duration * 60000);
+    }
+
+    await request.update(updates, { transaction });
+
+    await transaction.commit();
+    return request;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+};
+
+/**
+ * Public: List all service requests for a specific citizen phone number
+ */
+const listCitizenRequests = async (phone, { page = 1, limit = 10, status }) => {
+  try {
+    const offset = (page - 1) * limit;
+    const whereClause = { user_phone: phone };
+
+    if (status) {
+      whereClause.status = status;
+    }
+
+    const { count, rows } = await ServiceRequest.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: Service,
+          attributes: ["type", "place", "duration", "quality_standard", "delivery_mode", "paymentAmount"],
+        },
+      ],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [["createdAt", "DESC"]],
+    });
+
+    return {
+      totalItems: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: parseInt(page),
+      requests: rows,
+    };
+  } catch (error) {
+    throw new AppError("Database error: Unable to fetch citizen requests", 500);
+  }
+};
+
 module.exports = {
   createCityService,
   listCitiesService,
@@ -920,4 +1095,7 @@ module.exports = {
   getServicesByUnitService,
   officerCompleteTask,
   citizenCompleteTask,
+  rejectServiceRequest,
+  assignRequestToOfficer,
+  listCitizenRequests,
 };

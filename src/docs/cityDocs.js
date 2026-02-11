@@ -1222,9 +1222,48 @@
  *         description: ID of the Administrative Unit
  *     responses:
  *       200:
- *         description: List of available services
+ *         description: List of available services and unit information retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     unit:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                         name:
+ *                           type: string
+ *                         level:
+ *                           type: string
+ *                     services:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           type:
+ *                             type: string
+ *                           place:
+ *                             type: string
+ *                           duration:
+ *                             type: integer
+ *                           delivery_mode:
+ *                             type: string
+ *                           paymentAmount:
+ *                             type: string
  *       404:
- *         description: Unit not found or no services available
+ *         description: Unit not found
  */
 
 /**
@@ -1269,10 +1308,12 @@
  * @swagger
  * /cities/services/requests/assigned:
  *   get:
- *     summary: List all service requests for services managed by the authenticated Group Leader (GL only)
+ *     summary: List assigned service requests (Group Leaders & Officers)
  *     description: >
- *       Retrieves all service requests (PENDING, IN_PROGRESS, etc.) for the service catalog items 
- *       currently managed by the authenticated Group Leader. Results are paginated.
+ *       Retrieves service requests based on the authenticated user's role:
+ *       - **Group Leaders**: See all requests for services they are assigned to manage.
+ *       - **Officers**: See only the requests explicitly assigned to them as the 'officer_id'.
+ *       Results are paginated and ordered by creation date.
  *     tags: [Service Management]
  *     security:
  *       - bearerAuth: []
@@ -1289,6 +1330,12 @@
  *           type: integer
  *           default: 10
  *         description: Number of items per page
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, CONFIRMED, REJECTED, IN_PROGRESS, COMPLETED]
+ *         description: Filter by status (optional)
  *     responses:
  *       200:
  *         description: Paginated list of assigned requests retrieved successfully
@@ -1331,3 +1378,166 @@
  *       500:
  *         description: Internal server error
  */
+
+/**
+ * @swagger
+ * /cities/services/requests/{id}/officer-complete:
+ *   put:
+ *     summary: Mark a task as completed (Officer/Group Leader)
+ *     description: >
+ *       Records the completion time by the assigned Officer or an authorized Group Leader. 
+ *       This transitions the request towards completion and stops the internal SLA timer part.
+ *     tags: [Service Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Request ID
+ *     responses:
+ *       200:
+ *         description: Task marked as completed successfully
+ *       400:
+ *         description: Invalid state (not in progress)
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (not assigned to this task/service)
+ *       404:
+ *         description: Request not found
+ */
+
+/**
+ * @swagger
+ * /cities/services/requests/{id}/citizen-complete:
+ *   patch:
+ *     summary: Confirm task completion (Citizen/Public)
+ *     description: >
+ *       Allows a citizen to confirm that the service was successfully delivered. 
+ *       Requires the citizen's phone number for validation. 
+ *       This finalizes the request status to 'COMPLETED' and triggers the final SLA calculation.
+ *     tags: [Citizen Operations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Request ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - user_phone
+ *             properties:
+ *               user_phone:
+ *                 type: string
+ *                 example: "0911223344"
+ *     responses:
+ *       200:
+ *         description: Citizen completion confirmed successfully
+ *       400:
+ *         description: Invalid input or unauthorized phone number
+ *       404:
+ *         description: Request not found
+ */
+
+/**
+ * @swagger
+ * /cities/services/requests/{id}/reject:
+ *   patch:
+ *     summary: Reject a service request (Group Leader only)
+ *     description: >
+ *       Updates the request status to 'REJECTED'. A reason for rejection must be provided.
+ *       Only Group Leaders assigned to the specific service can perform this action.
+ *     tags: [Service Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Request ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - rejection_reason
+ *             properties:
+ *               rejection_reason:
+ *                 type: string
+ *                 example: "Missing required documents (Citizenship ID)"
+ *     responses:
+ *       200:
+ *         description: Service request rejected successfully
+ *       400:
+ *         description: Invalid state for rejection or missing reason
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (not assigned to this service)
+ *       404:
+ *         description: Request not found
+ */
+
+/**
+ * @swagger
+ * /cities/services/requests/{id}/assign:
+ *   patch:
+ *     summary: Assign a service request to an Officer (Group Leader only)
+ *     description: >
+ *       Assigns a service request to a specific Officer. 
+ *       If the request is currently 'PENDING' or 'CONFIRMED', this action will transition 
+ *       it to 'IN_PROGRESS' and trigger the SLA timer.
+ *       Only Group Leaders assigned to the specific service can perform this action.
+ *     tags: [Service Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Request ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - officer_id
+ *             properties:
+ *               officer_id:
+ *                 type: string
+ *                 format: uuid
+ *                 example: "550e8400-e29b-41d4-a716-446655440000"
+ *     responses:
+ *       200:
+ *         description: Task assigned to officer successfully
+ *       400:
+ *         description: Invalid officer or invalid request state
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (not assigned to this service)
+ *       404:
+ *         description: Request not found
+ */
+

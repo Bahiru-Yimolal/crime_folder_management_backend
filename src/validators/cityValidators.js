@@ -250,6 +250,103 @@ const validateCreateServiceRequestInput = (req, res, next) => {
   next();
 };
 
+const rejectServiceRequestSchema = Joi.object({
+  rejection_reason: Joi.string().required().messages({
+    "string.empty": "Rejection reason is required",
+    "any.required": "Rejection reason is required",
+  }),
+});
+
+const validateRejectServiceRequestInput = (req, res, next) => {
+  const { error } = rejectServiceRequestSchema.validate(req.body);
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.details[0].message,
+    });
+  }
+
+  next();
+};
+
+const assignRequestToOfficerSchema = Joi.object({
+  officer_id: Joi.string().uuid().required().messages({
+    "string.empty": "Officer ID is required",
+    "string.guid": "Invalid Officer ID format",
+    "any.required": "Officer ID is required",
+  }),
+});
+
+const validateAssignRequestToOfficerInput = (req, res, next) => {
+  const { error } = assignRequestToOfficerSchema.validate(req.body);
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.details[0].message,
+    });
+  }
+
+  next();
+};
+
+const assignedRequestsQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).optional(),
+  limit: Joi.number().integer().min(1).optional(),
+  status: Joi.string()
+    .valid("PENDING", "CONFIRMED", "REJECTED", "IN_PROGRESS", "COMPLETED")
+    .optional()
+    .messages({
+      "any.only": "Invalid status. Must be PENDING, CONFIRMED, REJECTED, IN_PROGRESS, or COMPLETED",
+    }),
+});
+
+const validateAssignedRequestsQuery = (req, res, next) => {
+  const { error } = assignedRequestsQuerySchema.validate(req.query);
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.details[0].message,
+    });
+  }
+
+  next();
+};
+
+const citizenRequestsQuerySchema = Joi.object({
+  phone: Joi.string()
+    .pattern(/^[0-9+]{10,15}$/)
+    .required()
+    .messages({
+      "string.empty": "Phone number is required",
+      "string.pattern.base": "Invalid phone number format",
+      "any.required": "Phone number is required",
+    }),
+  page: Joi.number().integer().min(1).optional(),
+  limit: Joi.number().integer().min(1).optional(),
+  status: Joi.string()
+    .valid("PENDING", "CONFIRMED", "REJECTED", "IN_PROGRESS", "COMPLETED")
+    .optional()
+    .messages({
+      "any.only": "Invalid status. Must be PENDING, CONFIRMED, REJECTED, IN_PROGRESS, or COMPLETED",
+    }),
+});
+
+const validateCitizenRequestsQuery = (req, res, next) => {
+  const { error } = citizenRequestsQuerySchema.validate(req.query);
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.details[0].message,
+    });
+  }
+
+  next();
+};
+
 module.exports = {
   validateCityInput,
   validateAssignUserInput,
@@ -259,4 +356,8 @@ module.exports = {
   validateCreateServiceInput,
   validateUpdateServiceInput,
   validateCreateServiceRequestInput,
+  validateRejectServiceRequestInput,
+  validateAssignRequestToOfficerInput,
+  validateAssignedRequestsQuery,
+  validateCitizenRequestsQuery,
 };
