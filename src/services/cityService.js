@@ -1038,6 +1038,52 @@ const assignRequestToOfficer = async (requestId, userId, officerId) => {
 };
 
 /**
+ * Group Leader confirms a service request to provide the service themselves
+ */
+const confirmServiceRequest = async (requestId, userId) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const request = await ServiceRequest.findByPk(requestId, {
+      include: [{ model: Service }],
+      transaction,
+    });
+
+    if (!request) throw new AppError("Service request not found", 404);
+
+    // 1. Security: Verify if the actor (GL) is assigned to this service
+    const assignment = await ServiceAssignment.findOne({
+      where: { service_id: request.service_id, group_leader_id: userId, is_active: true },
+      transaction,
+    });
+
+    if (!assignment) {
+      throw new AppError("Unauthorized: You are not assigned to manage this service", 403);
+    }
+
+    // 2. Check status logic
+    if (!["PENDING", "CONFIRMED"].includes(request.status)) {
+      throw new AppError(`Cannot confirm a request in ${request.status} status`, 400);
+    }
+
+    // 3. Update Request: Transition status to IN_PROGRESS and start timer
+    const startTime = new Date();
+    await request.update({
+      status: "IN_PROGRESS",
+      group_leader_id: userId,
+      start_time: startTime,
+      expected_completion: new Date(startTime.getTime() + request.Service.duration * 60000),
+      officer_id: null, // No officer assigned, GL is doing it
+    }, { transaction });
+
+    await transaction.commit();
+    return request;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+};
+
+/**
  * Public: List all service requests for a specific citizen phone number
  */
 const listCitizenRequests = async (phone, { page = 1, limit = 10, status }) => {
@@ -1097,5 +1143,6 @@ module.exports = {
   citizenCompleteTask,
   rejectServiceRequest,
   assignRequestToOfficer,
+  confirmServiceRequest,
   listCitizenRequests,
 };

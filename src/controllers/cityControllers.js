@@ -23,6 +23,7 @@ const {
   citizenCompleteTask,
   rejectServiceRequest,
   assignRequestToOfficer,
+  confirmServiceRequest,
   listCitizenRequests,
   getPersonnelByRoleService } = require("../services/cityService");
 
@@ -492,6 +493,23 @@ const assignRequestToOfficerController = async (req, res, next) => {
   }
 };
 
+const confirmServiceRequestController = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const request = await confirmServiceRequest(id, userId);
+
+    res.status(200).json({
+      success: true,
+      message: "Service request confirmed and started successfully",
+      data: request,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const listCitizenRequestsController = async (req, res, next) => {
   try {
     const { phone, page, limit, status } = req.query;
@@ -536,5 +554,6 @@ module.exports = {
   citizenCompleteTaskController,
   rejectServiceRequestController,
   assignRequestToOfficerController,
+  confirmServiceRequestController,
   listCitizenRequestsController,
 };

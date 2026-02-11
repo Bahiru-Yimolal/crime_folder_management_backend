@@ -1641,3 +1641,36 @@
  *       500:
  *         description: Internal server error
  */
+
+/**
+ * @swagger
+ * /cities/services/requests/{id}/confirm:
+ *   patch:
+ *     summary: Confirm and start a service request (Group Leader only)
+ *     description: >
+ *       Allows a Group Leader to take ownership of a service request and start it themselves.
+ *       This transitions the status to 'IN_PROGRESS', sets the Group Leader as the owner, 
+ *       and starts the SLA timer.
+ *     tags: [Service Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Request ID
+ *     responses:
+ *       200:
+ *         description: Service request confirmed and started successfully
+ *       400:
+ *         description: Invalid state (not pending/confirmed)
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (not assigned to this service)
+ *       404:
+ *         description: Request not found
+ */

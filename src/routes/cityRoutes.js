@@ -20,11 +20,12 @@ const {
   createServiceRequestController,
   listAssignedRequestsController,
   getPublicServicesController,
+  rejectServiceRequestController,
+  assignRequestToOfficerController,
+  confirmServiceRequestController,
   listCitizenRequestsController,
   officerCompleteTaskController,
   citizenCompleteTaskController,
-  rejectServiceRequestController,
-  assignRequestToOfficerController,
 } = require("../controllers/cityControllers");
 const {
   validateCityInput,
@@ -217,6 +218,13 @@ router.patch(
   assignmentMiddleware,
   validateAssignRequestToOfficerInput,
   assignRequestToOfficerController
+);
+
+router.patch(
+  "/services/requests/:id/confirm",
+  protect,
+  assignmentMiddleware,
+  confirmServiceRequestController
 );
 
 router.post(
