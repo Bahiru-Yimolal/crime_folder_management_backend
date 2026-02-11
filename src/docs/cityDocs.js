@@ -1543,7 +1543,7 @@
 
 /**
  * @swagger
- * /services/requests/citizen:
+ * /cities/services/requests/citizen:
  *   get:
  *     summary: List all service requests for a specific citizen (Public)
  *     description: Retrieves a paginated list of service requests submitted by a citizen, identified by their phone number.
