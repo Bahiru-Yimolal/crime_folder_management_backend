@@ -630,39 +630,11 @@ const loginService = async (phone_number, password) => {
 //   console.log(sectorLeader);
 // };
 
-// const getPendingUsersBySectorService = async (sectorName) => {
-//   if (!sectorName) throw new AppError("Sector name is required", 400);
 
-//   const users = await User.findAll({
-//     where: {
-//       sector: sectorName,
-//       status: "pending",
-//     },
-//     attributes: [
-//       "user_id",
-//       "first_name",
-//       "last_name",
-//       "email",
-//       "phone_number",
-//       "sector",
-//       "status",
-//       "role",
-//       "createdAt",
-//     ],
-//     order: [["createdAt", "DESC"]],
-//   });
-
-//   if (users.length === 0) {
-//     throw new AppError(`No pending users found in sector: ${sectorName}`, 404);
-//   }
-
-//   return users;
-// };
 
 module.exports = {
   registerUserService,
   loginService,
-
   // getAllUsersService,
   // updateUserService,
   // updatePasswordService,

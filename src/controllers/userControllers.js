@@ -1,7 +1,6 @@
 const {
   registerUserService,
   loginService,
-
   // getAllUsersService,
   // updateUserService,
   // updatePasswordService,
@@ -58,100 +57,6 @@ const userRegistrationController = async (req, res, next) => {
   }
 };
 
-// const adminRegistrationController = async (req, res, next) => {
-//   try {
-//     const { first_name, last_name, email, phone_number, password } = req.body;
-
-//     const newUser = await registerAdminService(
-//       first_name,
-//       last_name,
-//       email,
-//       phone_number,
-//       password
-//     );
-
-//     res.status(201).json({
-//       success: true,
-//       message:
-//         "Admin created",
-//       user: newUser,
-//     });
-//   } catch (error) {
-//     // Pass the error to the global error handler using next(error)
-//     next(error);
-//   }
-// };
-
-// const headRegistrationController = async (req, res, next) => {
-//   try {
-//     const { first_name, last_name, email, phone_number,sector, password } = req.body;
-
-//     const newUser = await registerHeadService(
-//       first_name,
-//       last_name,
-//       email,
-//       phone_number,
-//       sector,
-//       password
-//     );
-
-//     res.status(201).json({
-//       success: true,
-//       message:
-//         "The administrator account has been successfully created. Access will be granted once it is authorized by the Super Administrator.",
-//       user: newUser,
-//     });
-//   } catch (error) {
-//     // Pass the error to the global error handler using next(error)
-//     next(error);
-//   }
-// };
-
-// const superAdminRegistrationController = async (req, res, next) => {
-//   try {
-//     const { first_name, last_name, email, phone_number, password } = req.body;
-
-//     const newUser = await registerSuperAdminService(
-//       first_name,
-//       last_name,
-//       email,
-//       phone_number,
-//       password
-//     );
-
-//     res.status(201).json({
-//       success: true,
-//       message: "We created successfully",
-//       user: newUser,
-//     });
-//   } catch (error) {
-//     // Pass the error to the global error handler using next(error)
-//     next(error);
-//   }
-// };
-// const superRegistrationController = async (req, res, next) => {
-//   try {
-//     const { first_name, last_name, email, phone_number, password } = req.body;
-
-//     const newUser = await registerSuperService(
-//       first_name,
-//       last_name,
-//       email,
-//       phone_number,
-//       password
-//     );
-
-//     res.status(201).json({
-//       success: true,
-//       message: "Super created successfully",
-//       user: newUser,
-//     });
-//   } catch (error) {
-//     // Pass the error to the global error handler using next(error)
-//     next(error);
-//   }
-// };
-
 // const getAllUsersController = async (req, res, next) => {
 //   try {
 //     // Call the service to get all users
@@ -207,58 +112,7 @@ const userRegistrationController = async (req, res, next) => {
 //   }
 // };
 
-// const getAllUsersWithPendingStatusController = async (req, res, next) => {
-//   try {
-//     // Call the service to get all users
 
-//     const users = await getAllUsersWithPendingService();
-
-//     // Respond with the list of users
-//     res.status(200).json({
-//       success: true,
-//       message: "Users retrieved successfully",
-//       users,
-//     });
-//   } catch (error) {
-//     // Pass any error to the error handling middleware
-//     next(error);
-//   }
-// };
-
-// const getAllUsersWithPendingStatusAdminController = async (req, res, next) => {
-//   try {
-//     // Call the service to get all users
-
-//     const users = await getAllUsersWithPendingAdminService();
-
-//     // Respond with the list of users
-//     res.status(200).json({
-//       success: true,
-//       message: "Admin retrieved successfully",
-//       users,
-//     });
-//   } catch (error) {
-//     // Pass any error to the error handling middleware
-//     next(error);
-//   }
-// };
-// const getAllUsersWithPendingStatusHeadController = async (req, res, next) => {
-//   try {
-//     // Call the service to get all users
-
-//     const users = await getAllUsersWithPendingHeadService();
-
-//     // Respond with the list of users
-//     res.status(200).json({
-//       success: true,
-//       message: "Head retrieved successfully",
-//       users,
-//     });
-//   } catch (error) {
-//     // Pass any error to the error handling middleware
-//     next(error);
-//   }
-// };
 
 // const resetEmailPasswordController = async (req, res, next) => {
 //   // const userId = req.user.id; // Assuming `req.user` has the authenticated user info
@@ -285,46 +139,8 @@ const userRegistrationController = async (req, res, next) => {
 //   }
 // };
 
-// const getAllAdminBySeenController = async (req, res, next) => {
-//   try {
-//     // Call the service to get all users
 
-//     const users = await getAllAdminBySeenService();
 
-//     // Respond with the list of users
-//     res.status(200).json({
-//       success: true,
-//       message: "Admins retrieved successfully",
-//       users,
-//     });
-//   } catch (error) {
-//     // Pass any error to the error handling middleware
-//     next(error);
-//   }
-// };
-
-// const removeIsSeenController = async (req, res, next) => {
-//   try {
-//     const { user_id } = req.params;
-
-//     const updatedUser = await removeIsSeenService(user_id);
-
-//     if (!updatedUser) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "User not found or already marked as seen",
-//       });
-//     }
-
-//     res.status(200).json({
-//       success: true,
-//       message: "User isSeen status updated to true",
-//       user: updatedUser,
-//     });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
 
 
 // const sendBulkEmailController = async (req, res, next) => {
@@ -344,35 +160,7 @@ const userRegistrationController = async (req, res, next) => {
 //   }
 // };
 
-// const getSectorNameController = async (req, res, next) => {
-//   try {
-//     const id = req.user.payload.categoryId;
-//     const role = req.user.payload.role;
 
-//     const sectorName = await getSectorNameService(id, role);
-
-//     res.status(200).json({
-//       status: "success",
-//       data: sectorName,
-//     });
-//   } catch (error) {
-//     next(error); // Pass the error to middleware
-//   }
-// };
-
-
-// const getNumberReportController = async (req, res, next) => {
-//   try {
-//     const report = await getNumberReportService();
-
-//     res.status(200).json({
-//       status: "success",
-//       data: report,
-//     });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
 
 // const resetUserPasswordController = async (req, res, next) => {
 //   try {
@@ -390,36 +178,19 @@ const userRegistrationController = async (req, res, next) => {
 //   }
 // };
 
-// const getPendingUsersBySector = async (req, res, next) => {
-//   try {
-//     const { sectorName } = req.params;
 
-//   const users = await getPendingUsersBySectorService(sectorName);
-
-//     res.status(200).json({
-//       success: true,
-//       message: `users fetched successfully for sector: ${sectorName}`,
-//       data: users,
-//     });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
 
 module.exports = {
   userRegistrationController,
   authUserController,
-
+  
   // getAllUsersController,
+
   // updateUserController,
   // updateUserPasswordController,
   // getAllUsersWithPendingStatusController,
-  // adminRegistrationController,
-  // headRegistrationController,
-  // superAdminRegistrationController,
   // getAllUsersWithPendingStatusAdminController,
   // getAllUsersWithPendingStatusHeadController,
-  // superRegistrationController,
   // resetEmailPasswordController,
   // resetPasswordController,
   // getAllAdminBySeenController,
@@ -428,5 +199,5 @@ module.exports = {
   // getSectorNameController,
   // getNumberReportController,
   // resetUserPasswordController,
-  // getPendingUsersBySector
+
 };

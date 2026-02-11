@@ -1541,3 +1541,103 @@
  *         description: Request not found
  */
 
+/**
+ * @swagger
+ * /services/requests/citizen:
+ *   get:
+ *     summary: List all service requests for a specific citizen (Public)
+ *     description: Retrieves a paginated list of service requests submitted by a citizen, identified by their phone number.
+ *     tags: [Citizen Operations]
+ *     parameters:
+ *       - in: query
+ *         name: phone
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9+]{10,15}$'
+ *         description: Citizen's phone number
+ *         example: "+251911234567"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, CONFIRMED, REJECTED, IN_PROGRESS, COMPLETED]
+ *         description: Filter by request status
+ *     responses:
+ *       200:
+ *         description: List of citizen service requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     totalItems:
+ *                       type: integer
+ *                       example: 5
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 1
+ *                     currentPage:
+ *                       type: integer
+ *                       example: 1
+ *                     requests:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           service_id:
+ *                             type: string
+ *                             format: uuid
+ *                           user_phone:
+ *                             type: string
+ *                           status:
+ *                             type: string
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                           updatedAt:
+ *                             type: string
+ *                             format: date-time
+ *                           Service:
+ *                             type: object
+ *                             properties:
+ *                               type:
+ *                                 type: string
+ *                               place:
+ *                                 type: string
+ *                               duration:
+ *                                 type: integer
+ *                               quality_standard:
+ *                                 type: integer
+ *                               delivery_mode:
+ *                                 type: string
+ *                               paymentAmount:
+ *                                 type: string
+ *       400:
+ *         description: Invalid query parameters
+ *       500:
+ *         description: Internal server error
+ */
