@@ -474,3 +474,41 @@
  *       500:
  *         description: Internal server error
  */
+/**
+ * @swagger
+ * /users/pendingStatus:
+ *   get:
+ *     summary: Get all users with pending status
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of users with pending status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   user_id:
+ *                     type: integer
+ *                     example: 1
+ *                   first_name:
+ *                     type: string
+ *                     example: John
+ *                   last_name:
+ *                     type: string
+ *                     example: Doe
+ *                   phone_number:
+ *                     type: string
+ *                     example: "0912345678"
+ *                   status:
+ *                     type: string
+ *                     example: assigned
+ *       401:
+ *         description: Unauthorized, invalid token
+ *       500:
+ *         description: Internal server error
+ */

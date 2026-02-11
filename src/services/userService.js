@@ -5,8 +5,6 @@ const {
   Permission,
   UserAssignment,
   UserPermission,
-  CrimeFolder,
-  CrimeFolderAttachment,
   AuditLog,
 } = require("../models");
 
@@ -172,264 +170,223 @@ const loginService = async (phone_number, password) => {
   };
 };
 
-// const getAllUsersWithPendingService = async () => {
-//   try {
-//     // Fetch all registered users
-//     const users = await User.findAll({
-//       where: { status: "pending", role: "Super" }, // Filter for users with pending status
-//       attributes: [
-//         "user_id",
-//         "first_name",
-//         "last_name",
-//         "phone_number",
-//         "status",
-//       ], // Only these fields will be selected
-//     });
+const updateUserService = async (userId, firstName, lastName,email, phoneNumber) => {
+  // Check if the user exists
+  const user = await User.findByPk(userId);
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  // Check if phone number is already in use by another user
+
+  if (phoneNumber) {
+    const existingUser = await User.findOne({
+      where: { phone_number: phoneNumber, user_id: { [Op.ne]: userId } },
+    });
+    if (existingUser) {
+      throw new AppError("Phone number is already registered", 400);
+    }
+  }
+
+  //  console.log("user");
+
+  // Update user details
+  user.first_name = firstName || user.first_name;
+  user.last_name = lastName || user.last_name;
+  user.phone_number = phoneNumber || user.phone_number;
+  user.email = email || user.email;
+  await user.save();
+
+  return user;
+};
+
+const updatePasswordService = async (userId, currentPassword, newPassword) => {
+  const user = await User.findByPk(userId);
+
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  const isPasswordValid = await comparePassword(currentPassword, user.password);
+  if (!isPasswordValid) {
+    throw new AppError("Current password is incorrect", 400);
+  }
+
+  user.password = await hashPassword(newPassword);
+  await user.save();
+
+  return { success: true, message: "Password updated successfully" };
+};
+
+const getAllUsersService = async () => {
+  try {
+    // Fetch all registered users
+    const users = await User.findAll({
+      attributes: [
+        "user_id",
+        "first_name",
+        "last_name",
+        "phone_number",
+        "status",
+      ], // Only these fields will be selected
+    });
+
+    if (!users || users.length === 0) {
+      throw new AppError("No users found", 404); // If no users are found
+    }
+
+    return users;
+  } catch (error) {
+    throw new AppError(
+      error.message || "Database error: Unable to fetch users",
+      500
+    );
+  }
+};
 
 
-//     if (!users || users.length === 0) {
-//       throw new AppError("No users found", 404); // If no users are found
-//     }
+const resetEmailPasswordService = async (email) => {
+  const existingUser = await User.findOne({ where: { email } });
 
-//     return users;
-//   } catch (error) {
+  if (!existingUser) {
+    throw new AppError("No user found with this email", 404);
+  }
 
-//     throw new AppError(
-//       error.message || "Database error: Unable to fetch users",
-//       500
-//     );
-//   }
-// };
+  // Generate reset token (expires in 15 minutes or so)
+  const token = jwt.sign(
+    { id: existingUser.user_id, email: existingUser.email },
+    JWT_SECRET,
+    { expiresIn: RESET_PASSWORD_TOKEN_EXPIRY || "15m" }
+  );
 
-// const getAllUsersWithPendingAdminService = async () => {
-//   try {
-//     // Fetch all registered users
-//     const users = await User.findAll({
-//       where: { status: "pending", role: "Admin" }, // Filter for users with pending status
-//       attributes: [
-//         "user_id",
-//         "first_name",
-//         "last_name",
-//         "phone_number",
-//         "status",
-//       ], // Only these fields will be selected
-//     });
+  // Construct reset link
+  const resetLink = `${CLIENT_URL}/reset-password/${token}`;
 
-//     if (!users || users.length === 0) {
-//       throw new AppError("No users found", 404); // If no users are found
-//     }
+  // console.log(token);
 
-//     return users;
-//   } catch (error) {
-//     throw new AppError(
-//       error.message || "Database error: Unable to fetch users",
-//       500
-//     );
-//   }
-// };
-
-// const getAllUsersWithPendingHeadService = async () => {
-//   try {
-//     // Fetch all registered users
-//     const users = await User.findAll({
-//       where: { status: "pending", role: "Head" }, // Filter for users with pending status
-//       attributes: [
-//         "user_id",
-//         "first_name",
-//         "last_name",
-//         "phone_number",
-//         "status",
-//       ], // Only these fields will be selected
-//     });
-
-//     if (!users || users.length === 0) {
-//       throw new AppError("No users found", 404); // If no users are found
-//     }
-
-//     return users;
-//   } catch (error) {
-//     throw new AppError(
-//       error.message || "Database error: Unable to fetch users",
-//       500
-//     );
-//   }
-// };
-
-
-// const resetEmailPasswordService = async (email) => {
-//   const existingUser = await User.findOne({ where: { email } });
-
-//   if (!existingUser) {
-//     throw new AppError("No user found with this email", 404);
-//   }
-
-//   // Generate reset token (expires in 15 minutes or so)
-//   const token = jwt.sign(
-//     { id: existingUser.user_id, email: existingUser.email },
-//     JWT_SECRET,
-//     { expiresIn: RESET_PASSWORD_TOKEN_EXPIRY || "15m" }
-//   );
-
-//   // Construct reset link
-//   const resetLink = `${CLIENT_URL}/reset-password/${token}`;
-
-//   // console.log(token);
-
-//   // Send email
-//   const subject = "Password Reset Request";
-//   const html = `
-//   <!DOCTYPE html>
-//   <html>
-//   <head>
-//       <style>
-//           body {
-//               font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-//               line-height: 1.6;
-//               color: #333;
-//               max-width: 600px;
-//               margin: 0 auto;
-//               padding: 20px;
-//               background-color: #f9f9f9;
-//           }
-//           .header {
-//               text-align: center;
-//               padding: 10px 0;
-//               background-color: #0f766e;
-//               color: white;
-//               border-radius: 8px 8px 0 0;
-//           }
-//           .logo {
-//               font-size: 24px;
-//               font-weight: bold;
-//               color: #ffffff;
-//           }
-//           .content {
-//               background-color: white;
-//               padding: 20px;
-//               border-radius: 0 0 8px 8px;
-//               box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-//           }
-//           .button {
-//               display: inline-block;
-//               padding: 12px 24px;
-//               background-color: #0f766e;
-//               color: #ffffff !important;
-//               text-decoration: none;
-//               border-radius: 5px;
-//               font-weight: bold;
-//               margin: 15px 0;
-//               text-align: center;
-//           }
-//           .footer {
-//               text-align: center;
-//               margin-top: 20px;
-//               font-size: 12px;
-//               color: #777;
-//           }
-//           .highlight {
-//               color: #E74C3C;
-//               font-weight: bold;
-//           }
-//       </style>
-//   </head>
-//   <body>
-//       <div class="header">
-//           <div class="logo">Addis Ababa Coders</div>
-//           <p>Empowering the Future of Tech in Ethiopia</p>
-//       </div>
-//       <div class="content">
-//           <p>Hello <strong>${existingUser.first_name} ${
-//     existingUser.last_name
-//   }</strong>,</p>
+  // Send email
+  const subject = "Password Reset Request";
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+      <style>
+          body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+              background-color: #f9f9f9;
+          }
+          .header {
+              text-align: center;
+              padding: 10px 0;
+              background-color: #0f766e;
+              color: white;
+              border-radius: 8px 8px 0 0;
+          }
+          .logo {
+              font-size: 24px;
+              font-weight: bold;
+              color: #ffffff;
+          }
+          .content {
+              background-color: white;
+              padding: 20px;
+              border-radius: 0 0 8px 8px;
+              box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+          }
+          .button {
+              display: inline-block;
+              padding: 12px 24px;
+              background-color: #0f766e;
+              color: #ffffff !important;
+              text-decoration: none;
+              border-radius: 5px;
+              font-weight: bold;
+              margin: 15px 0;
+              text-align: center;
+          }
+          .footer {
+              text-align: center;
+              margin-top: 20px;
+              font-size: 12px;
+              color: #777;
+          }
+          .highlight {
+              color: #E74C3C;
+              font-weight: bold;
+          }
+      </style>
+  </head>
+  <body>
+      <div class="header">
+          <div class="logo">Addis Ababa Coders</div>
+          <p>Empowering the Future of Tech in Ethiopia</p>
+      </div>
+      <div class="content">
+          <p>Hello <strong>${existingUser.first_name} ${
+    existingUser.last_name
+  }</strong>,</p>
           
-//           <p>We received a request to reset your password for your <strong>Addis Ababa Coders</strong> account. No worries—let’s get you back on track!</p>
+          <p>We received a request to reset your password for your <strong>Addis Ababa Coders</strong> account. No worries—let’s get you back on track!</p>
           
-//           <p style="text-align: center;">
-//               <a href="${resetLink}" class="button">Reset Your Password</a>
-//           </p>
+          <p style="text-align: center;">
+              <a href="${resetLink}" class="button">Reset Your Password</a>
+          </p>
           
-//           <p>For security reasons, this link will <span class="highlight">expire in 5 minutes</span>. If you didn’t request this, please ignore this email—your account is still safe with us.</p>
+          <p>For security reasons, this link will <span class="highlight">expire in 5 minutes</span>. If you didn’t request this, please ignore this email—your account is still safe with us.</p>
           
-//           <p>Keep coding, keep innovating! 🚀</p>
+          <p>Keep coding, keep innovating! 🚀</p>
           
-//           <p>Best regards,<br>Addis Ababa Coders Management System</p>
-//       </div>
-//       <div class="footer">
-//           <p>© ${new Date().getFullYear()} Addis Ababa Coders Management System. All rights reserved.</p>
-//           <p>Addis Ababa, Ethiopia</p>
-//       </div>
-//   </body>
-//   </html>
-//   `;
+          <p>Best regards,<br>Addis Ababa Coders Management System</p>
+      </div>
+      <div class="footer">
+          <p>© ${new Date().getFullYear()} Addis Ababa Coders Management System. All rights reserved.</p>
+          <p>Addis Ababa, Ethiopia</p>
+      </div>
+  </body>
+  </html>
+  `;
   
 
-//  const emailAddress =  existingUser.email;
+ const emailAddress =  existingUser.email;
 
 
-//   try {
-//     await sendEmail(emailAddress, subject, html);
-//   } catch (emailError) {
-//     console.error("Email sending failed:", emailError.message);
-//     // You can choose whether to throw or silently ignore
-//   }
+  try {
+    await sendEmail(emailAddress, subject, html);
+  } catch (emailError) {
+    console.error("Email sending failed:", emailError.message);
+    // You can choose whether to throw or silently ignore
+  }
   
 
-//   return { message: "Reset email sent successfully" };
-// };
+  return { message: "Reset email sent successfully" };
+};
 
-// const resetPasswordService = async (userId,password) => {
-//   const existingUser = await User.findOne({
-//     where: { user_id:userId },
-//   });
+const resetPasswordService = async (userId,password) => {
+  const existingUser = await User.findOne({
+    where: { user_id:userId },
+  });
 
-//   if (!existingUser) {
-//     throw new AppError("No user found with this userId", 404);
-//   }
-//   const hashedPassword = await hashPassword(password);
-//   await existingUser.update({
-//     password: hashedPassword,
-//   });
+  if (!existingUser) {
+    throw new AppError("No user found with this userId", 404);
+  }
+  const hashedPassword = await hashPassword(password);
+  await existingUser.update({
+    password: hashedPassword,
+  });
 
-//   return {
-//     message: "Password reset successful",
-//   };
+  return {
+    message: "Password reset successful",
+  };
  
-// };
-
-// const getAllAdminBySeenService = async () => {
-//   try {
-//     const admins = await User.findAll({
-//       where: {
-//         role: {
-//           [Op.in]: ["Admin", "Head"], // Fetch users with role 'admin' or 'head'
-//         },
-//         status: "pending",
-//         isSeen: false,
-//       },
-//       order: [["user_id", "ASC"]],
-//     });
-
-//     return admins;
-//   } catch (error) {
-//     throw new Error("Failed to retrieve unseen admins: " + error.message);
-//   }
-// };
+};
 
 
-// const removeIsSeenService = async (user_id) => {
-//   // First, find the user
-//   const user = await User.findOne({ where: { user_id } });
 
-//   if (!user || user.isSeen === true) {
-//     return null;
-//   }
-
-//   // Update isSeen to true
-//   user.isSeen = true;
-//   await user.save();
-
-//   return user;
-// };
 
 // const sendBulkEmailService = async ({ subject, message, recipients }) => {
 //   const BATCH_SIZE = 50;
@@ -565,93 +522,63 @@ const loginService = async (phone_number, password) => {
 //   throw new AppError("Invalid role", 400);
 // };
 
-// const getNumberReportService = async () => {
-//   // Total coders
-//   const total_coders = await Profile.count();
 
-//   // Female and male coders (assuming gender field exists)
-//   const female_coders = await Profile.count({ where: { sex: "female" } });
-//   const male_coders = await Profile.count({ where: { sex: "male" } });
+const resetUserPasswordService = async (phoneNumber) => {
+  const sectorLeader =  await User.findOne({
+    where: { phone_number: phoneNumber },
+  });
+  if (!sectorLeader) {
+    throw new Error("User not found");
+  }
 
-//   // Admins with role 'Admin' and status 'assigned'
-//   const admin_count = await User.count({
-//     where: {
-//       role: "Admin",
-//       status: "assigned",
-//     },
-//   });
+  const hashedPassword = await hashPassword(process.env.DEFAULT_PASSWORD);
+  sectorLeader.password = hashedPassword;
+  await sectorLeader.save();
 
-//   // Heads with role 'Head' and status 'assigned'
-//   const head_count = await User.count({
-//     where: {
-//       role: "Head",
-//       status: "assigned",
-//     },
-//   });
+  return sectorLeader;
+  console.log(sectorLeader);
+};
 
-//   // Total events
-//   const total_events = await Event.count();
+const getAllUsersWithPendingService = async () => {
+  try {
+    // Fetch all registered users
+    const users = await User.findAll({
+      where: {
+        status: "UNASSIGNED",
+      },
+      attributes: [
+        "user_id",
+        "first_name",
+        "last_name",
+        "phone_number",
+        "status",
+      ],
+    });
 
-//   // Pending events
-//   const pending_events = await Event.count({ where: { state: "upcoming" } });
+    if (!users) {
+      throw new AppError("No users found", 404); // If no users are found
+    }
 
-//   // Done events
-//   const done_events = await Event.count({ where: { state: "done" } });
-
-//   // Total sectors
-//   const total_sectors = await Sector.count();
-
-//   return {
-//     total_coders,
-//     female_coders,
-//     male_coders,
-//     admin_count,
-//     head_count,
-//     total_events,
-//     pending_events,
-//     done_events,
-//     total_sectors,
-//   };
-// };
-
-// const resetUserPasswordService = async (phoneNumber) => {
-//   const sectorLeader =  await User.findOne({
-//     where: { phone_number: phoneNumber },
-//   });
-//   if (!sectorLeader) {
-//     throw new Error("User not found");
-//   }
-
-//   const hashedPassword = await hashPassword(process.env.DEFAULT_PASSWORD);
-//   sectorLeader.password = hashedPassword;
-//   await sectorLeader.save();
-
-//   return sectorLeader;
-//   console.log(sectorLeader);
-// };
+    return users;
+  } catch (error) {
+    throw new AppError(
+      error.message || "Database error: Unable to fetch users",
+      500
+    );
+  }
+};
 
 
 
 module.exports = {
   registerUserService,
   loginService,
-  // getAllUsersService,
-  // updateUserService,
-  // updatePasswordService,
-  // getAllUsersWithPendingService,
-  // registerAdminService,
-  // registerHeadService,
-  // registerSuperAdminService,
-  // registerSuperService,
-  // getAllUsersWithPendingAdminService,
-  // getAllUsersWithPendingHeadService,
-  // resetEmailPasswordService,
-  // resetPasswordService,
-  // getAllAdminBySeenService,
-  // removeIsSeenService,
-  // sendBulkEmailService,
-  // getSectorNameService,
-  // getNumberReportService,
-  // resetUserPasswordService,
-  // getPendingUsersBySectorService
+  getAllUsersService,
+  updateUserService,
+  updatePasswordService,
+  resetEmailPasswordService,
+  resetPasswordService,
+  resetUserPasswordService,
+  getAllUsersWithPendingService
+
 };

@@ -1,7 +1,6 @@
 const express = require("express");
 const {
   protect,
-  verifySubcityLeader,
 } = require("../middlewares/authMiddleware");
 const {
   userRegistrationController,
@@ -9,18 +8,10 @@ const {
   getAllUsersController,
   updateUserController,
   updateUserPasswordController,
-  getAllUsersWithPendingStatusController,
-  getAllUsersWithPendingStatusAdminController,
-  getAllUsersWithPendingStatusHeadController,
   resetEmailPasswordController,
   resetPasswordController,
-  getAllAdminBySeenController,
-  removeIsSeenController,
-  sendBulkEmailController,
-  getSectorNameController,
-  getNumberReportController,
   resetUserPasswordController,
-  getPendingUsersBySector
+  getAllUsersWithPendingStatusController
 } = require("../controllers/userControllers");
 const {
   validateUser,
@@ -40,26 +31,28 @@ const router = express.Router();
 
 router.route("/").post(validateUser, userRegistrationController);
 router.post("/login", validateLoginInfo, authUserController);
-
+router
+  .route("/updateInfo")
+  .patch(protect, validateUserUpdate, updateUserController);
+router
+  .route("/updatePassword")
+  .patch(protect, validatePassword, updateUserPasswordController);
+router.route("/").get(protect, getAllUsersController);
+router
+  .route("/forgot-password")
+  .post(validateEmail, resetEmailPasswordController);
+router
+  .route("/reset-password")
+  .post(protect,validateResetPassword, resetPasswordController);
+router
+  .route("/resetPassword/:phoneNumber")
+  .patch(protect, resetUserPasswordController);
+router.route("/pendingStatus").get(protect, getAllUsersWithPendingStatusController);
 
 // router.route("/sendBulkEmail").post(protect,validateEmailAttributes, sendBulkEmailController);
 
-// router.route("/").get(protect, getAllUsersController);
-// router
-//   .route("/updateInfo")
-//   .patch(protect, validateUserUpdate, updateUserController);
-// router
-//   .route("/updatePassword")
-//   .patch(protect, validatePassword, updateUserPasswordController);
-// router
-//   .route("/forgot-password")
-//   .post(validateEmail, resetEmailPasswordController);
-// router
-//   .route("/reset-password")
-//   .post(protect,validateResetPassword, resetPasswordController);
-// router
-//   .route("/resetPassword/:phoneNumber")
-//   .patch(protect, verifySubcityLeader, resetUserPasswordController);
+
+
 
 
 module.exports = router;

@@ -23,7 +23,6 @@ app.use("/api/users", userRoutes);
 app.use("/api/cities", cityRoutes);
 app.use("/api/subcities", subcityRoutes);
 app.use("/api/sectors", sectorRoutes);
-// app.use("/api/committees", committeeRoutes);
 
 app.use(errorMiddleware);
 

@@ -24,6 +24,7 @@ const {
   rejectServiceRequest,
   assignRequestToOfficer,
   confirmServiceRequest,
+  getUnitPersonnelDetailsService,
   listCitizenRequests,
   getPersonnelByRoleService } = require("../services/cityService");
 
@@ -510,6 +511,21 @@ const confirmServiceRequestController = async (req, res, next) => {
   }
 };
 
+const getUnitPersonnelDetailsController = async (req, res, next) => {
+  try {
+    const unitId = req.user.unit.id;
+
+    const personnel = await getUnitPersonnelDetailsService(unitId);
+
+    res.status(200).json({
+      success: true,
+      data: personnel,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const listCitizenRequestsController = async (req, res, next) => {
   try {
     const { phone, page, limit, status } = req.query;
@@ -555,5 +571,6 @@ module.exports = {
   rejectServiceRequestController,
   assignRequestToOfficerController,
   confirmServiceRequestController,
+  getUnitPersonnelDetailsController,
   listCitizenRequestsController,
 };

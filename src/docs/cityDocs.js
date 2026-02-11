@@ -1674,3 +1674,65 @@
  *       404:
  *         description: Request not found
  */
+
+/**
+ * @swagger
+ * /cities/personnel/unit-details:
+ *   get:
+ *     summary: Get all personnel in the same unit with roles and permissions (Admin only)
+ *     description: Retrieves all users assigned to the same administrative unit as the requesting admin, including their roles and assigned permissions.
+ *     tags: [Service Management]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of unit personnel with details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       user_id:
+ *                         type: integer
+ *                       first_name:
+ *                         type: string
+ *                       last_name:
+ *                         type: string
+ *                       email:
+ *                         type: string
+ *                       phone_number:
+ *                         type: string
+ *                       status:
+ *                         type: string
+ *                       role:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           name:
+ *                             type: string
+ *                       permissions:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: integer
+ *                             name:
+ *                               type: string
+ *                             description:
+ *                               type: string
+ *       401:
+ *         description: Illegal or expired token
+ *       403:
+ *         description: Forbidden (insufficient permissions)
+ *       500:
+ *         description: Database error
+ */

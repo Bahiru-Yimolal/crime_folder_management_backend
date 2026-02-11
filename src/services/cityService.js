@@ -363,6 +363,41 @@ const getPersonnelByRoleService = async ({ unitId, roleName }) => {
   }
 };
 
+const getUnitPersonnelDetailsService = async (unitId) => {
+  try {
+    const assignments = await UserAssignment.findAll({
+      where: { unit_id: unitId },
+      include: [
+        {
+          model: User,
+          attributes: ["user_id", "first_name", "last_name", "email", "phone_number", "status"]
+        },
+        {
+          model: Role,
+          attributes: ["id", "name"]
+        },
+        {
+          model: UserPermission,
+          include: [
+            {
+              model: Permission,
+              attributes: ["id", "name", "description"]
+            }
+          ]
+        }
+      ]
+    });
+
+    return assignments.map(a => ({
+      ...a.User.toJSON(),
+      role: a.Role,
+      permissions: a.UserPermissions.map(up => up.Permission)
+    }));
+  } catch (error) {
+    throw new AppError("Database error: Unable to fetch unit personnel details", 500);
+  }
+};
+
 
 const getAllPermissionsService = async () => {
   try {
@@ -1144,5 +1179,6 @@ module.exports = {
   rejectServiceRequest,
   assignRequestToOfficer,
   confirmServiceRequest,
+  getUnitPersonnelDetailsService,
   listCitizenRequests,
 };

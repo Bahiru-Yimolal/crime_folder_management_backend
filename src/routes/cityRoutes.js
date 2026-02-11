@@ -26,6 +26,7 @@ const {
   listCitizenRequestsController,
   officerCompleteTaskController,
   citizenCompleteTaskController,
+  getUnitPersonnelDetailsController,
 } = require("../controllers/cityControllers");
 const {
   validateCityInput,
@@ -256,6 +257,14 @@ router.get(
   protect,
   assignmentMiddleware,
   getPersonnelByRoleController
+);
+
+router.get(
+  "/personnel/unit-details",
+  protect,
+  assignmentMiddleware,
+  permissionMiddleware("ADMIN_PERMISSIONS"),
+  getUnitPersonnelDetailsController
 );
 
 module.exports = router;
