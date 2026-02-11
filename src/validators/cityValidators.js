@@ -171,13 +171,36 @@ const createServiceSchema = Joi.object({
     "any.required": "Delivery mode is required",
   }),
   preconditions: Joi.array().items(Joi.string()).optional(),
-  groupLeaderId: Joi.string().uuid().optional().messages({
-    "string.guid": "Group Leader ID must be a valid UUID",
+  groupLeaderIds: Joi.array().items(Joi.string().uuid()).optional().messages({
+    "array.base": "Group Leader IDs must be an array of UUIDs",
   }),
 });
 
 const validateCreateServiceInput = (req, res, next) => {
   const { error } = createServiceSchema.validate(req.body);
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.details[0].message,
+    });
+  }
+
+  next();
+};
+
+const updateServiceSchema = Joi.object({
+  type: Joi.string().optional(),
+  place: Joi.string().optional(),
+  duration: Joi.number().integer().min(1).optional(),
+  quality_standard: Joi.number().optional(),
+  delivery_mode: Joi.string().optional(),
+  preconditions: Joi.array().items(Joi.string()).optional(),
+  groupLeaderIds: Joi.array().items(Joi.string().uuid()).optional(),
+});
+
+const validateUpdateServiceInput = (req, res, next) => {
+  const { error } = updateServiceSchema.validate(req.body);
 
   if (error) {
     return res.status(400).json({
@@ -196,4 +219,5 @@ module.exports = {
   validateUnassignUserInput,
   validateUpdatePermissionsInput,
   validateCreateServiceInput,
+  validateUpdateServiceInput,
 };

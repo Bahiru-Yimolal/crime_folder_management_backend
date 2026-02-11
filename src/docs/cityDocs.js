@@ -932,10 +932,12 @@
  *                 items:
  *                   type: string
  *                 example: ["Application Form", "Birth Certificate"]
- *               groupLeaderId:
- *                 type: string
- *                 format: uuid
- *                 description: Optional ID of a Group Leader to assign
+ *               groupLeaderIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 description: Optional IDs of Group Leaders to assign
  *     responses:
  *       201:
  *         description: Service created successfully
@@ -955,12 +957,202 @@
  *                   properties:
  *                     service:
  *                       type: object
- *                     assignment:
- *                       type: object
- *                       nullable: true
+ *                     assignments:
+ *                       type: array
+ *                       items:
+ *                         type: object
  *       400:
  *         description: Invalid input or invalid Group Leader
  *       401:
  *         description: Unauthorized
+ */
+
+/**
+ * @swagger
+ * /cities/services/{id}:
+ *   put:
+ *     summary: Update an existing service (Admin only)
+ *     description: >
+ *       Updates a service catalog item. 
+ *       If groupLeaderIds is provided, the assignments are synchronized (replaced).
+ *     tags: [Service Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID of the service to update
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 example: "Registration Card"
+ *               place:
+ *                 type: string
+ *                 example: "Room 101"
+ *               duration:
+ *                 type: integer
+ *                 description: Time in minutes for the service (SLA)
+ *                 example: 45
+ *               quality_standard:
+ *                 type: number
+ *                 example: 4.8
+ *               delivery_mode:
+ *                 type: string
+ *                 example: "Online"
+ *               preconditions:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["Application Form"]
+ *               groupLeaderIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 description: Array of Group Leader IDs to assign
+ *     responses:
+ *       200:
+ *         description: Service updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Service updated successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     service:
+ *                       type: object
+ *                     assignments:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *       400:
+ *         description: Invalid input or invalid Group Leader
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Service not found
+ */
+
+/**
+ * @swagger
+ * /cities/services:
+ *   get:
+ *     summary: List all services in the Admin's sector (Admin only)
+ *     description: >
+ *       Retrieves all service catalog items created within the authenticated Admin's administrative unit.
+ *       Includes details about the current Group Leader assignments.
+ *     tags: [Service Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: Paginated list of services retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     totalItems:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
+ *                     currentPage:
+ *                       type: integer
+ *                     services:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           type:
+ *                             type: string
+ *                           place:
+ *                             type: string
+ *                           duration:
+ *                             type: integer
+ *                           delivery_mode:
+ *                             type: string
+ *                           ServiceAssignments:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 User:
+ *                                   type: object
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /cities/services/{id}:
+ *   delete:
+ *     summary: Delete a service (Admin only)
+ *     description: >
+ *       Deletes a service catalog item and its assignments.
+ *       The service can only be deleted if it has NO associated service requests.
+ *     tags: [Service Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID of the service to delete
+ *     responses:
+ *       200:
+ *         description: Service deleted successfully
+ *       400:
+ *         description: Cannot delete service (has associated requests)
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (not within unit)
+ *       404:
+ *         description: Service not found
  */
 

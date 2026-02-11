@@ -4,7 +4,7 @@ const Role = require("../models/roleModel");
 const { AppError } = require("../middlewares/errorMiddleware");
 const { Op } = require("sequelize");
 const { assignUserToUnit } = require("./assignnmentService");
-const { UserAssignment, User, Permission, UserPermission, Service, ServiceAssignment } = require("../models");
+const { UserAssignment, User, Permission, UserPermission, Service, ServiceAssignment, ServiceRequest } = require("../models");
 const sequelize = require("../config/database");
 
 const createCityService = async (name, user) => {
@@ -400,12 +400,22 @@ const createService = async ({
   quality_standard,
   delivery_mode,
   preconditions,
-  groupLeaderId = null,
+  groupLeaderIds = [],
   actor,
 }) => {
   const transaction = await sequelize.transaction();
 
   try {
+    // 0. Check if service with same type already exists in this unit
+    const existingService = await Service.findOne({
+      where: { type, unit_id: actor.unit.id },
+      transaction,
+    });
+
+    if (existingService) {
+      throw new AppError(`A service with the name "${type}" already exists in your unit.`, 400);
+    }
+
     // 1. Create the Service
     const service = await Service.create(
       {
@@ -416,41 +426,229 @@ const createService = async ({
         delivery_mode,
         preconditions,
         unit_id: actor.unit.id, // Derived from Admin's token
-        created_by: actor.user_id,
+        created_by: actor.id,
       },
       { transaction }
     );
 
-    // 2. If groupLeaderId is provided, create assignment
-    let assignment = null;
-    if (groupLeaderId) {
-      // Optional: Verify if the user is actually a GL in this unit
-      const isGL = await UserAssignment.findOne({
-        where: { user_id: groupLeaderId, unit_id: actor.unit.id },
-        include: [{ model: Role, where: { name: "GROUP_LEADER" } }],
-        transaction,
-      });
+    // 2. If groupLeaderIds are provided, create assignments
+    let assignments = [];
+    if (groupLeaderIds && groupLeaderIds.length > 0) {
+      for (const groupLeaderId of groupLeaderIds) {
+        // Optional: Verify if the user is actually a GL in this unit
+        const isGL = await UserAssignment.findOne({
+          where: { user_id: groupLeaderId, unit_id: actor.unit.id },
+          include: [{ model: Role, where: { name: "GROUP_LEADER" } }],
+          transaction,
+        });
 
-      if (!isGL) {
-        throw new AppError("The provided Group Leader ID is invalid or not a Group Leader in your unit", 400);
+        if (!isGL) {
+          throw new AppError(`The provided Group Leader ID ${groupLeaderId} is invalid or not a Group Leader in your unit`, 400);
+        }
+
+        const assignment = await ServiceAssignment.create(
+          {
+            service_id: service.id,
+            group_leader_id: groupLeaderId,
+            is_active: true,
+          },
+          { transaction }
+        );
+        assignments.push(assignment);
       }
-
-      assignment = await ServiceAssignment.create(
-        {
-          service_id: service.id,
-          group_leader_id: groupLeaderId,
-          is_active: true,
-        },
-        { transaction }
-      );
     }
 
     await transaction.commit();
 
     return {
       service,
-      assignment,
+      assignments,
     };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+};
+
+/**
+ * Update an existing service and its group leader assignments
+ */
+const updateService = async (id, {
+  type,
+  place,
+  duration,
+  quality_standard,
+  delivery_mode,
+  preconditions,
+  groupLeaderIds,
+  actor,
+}) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    // 1. Find the service
+    const service = await Service.findByPk(id, { transaction });
+    if (!service) {
+      throw new AppError("Service not found", 404);
+    }
+
+    // 2. Security Check: Only admins from the same unit (or higher) should update
+    if (service.unit_id !== actor.unit.id) {
+      throw new AppError("You can only update services within your own unit", 403);
+    }
+
+    // 3. Uniqueness Check: If type is being updated, check if new name already exists in this unit
+    if (type && type !== service.type) {
+      const duplicateService = await Service.findOne({
+        where: { type, unit_id: actor.unit.id, id: { [Op.ne]: id } },
+        transaction,
+      });
+
+      if (duplicateService) {
+        throw new AppError(`Another service with the name "${type}" already exists in your unit.`, 400);
+      }
+    }
+
+    // 4. Update Service Fields
+    await service.update(
+      {
+        type: type || service.type,
+        place: place || service.place,
+        duration: duration || service.duration,
+        quality_standard: quality_standard !== undefined ? quality_standard : service.quality_standard,
+        delivery_mode: delivery_mode || service.delivery_mode,
+        preconditions: preconditions || service.preconditions,
+      },
+      { transaction }
+    );
+
+    // 5. Update Assignments (if groupLeaderIds is provided)
+    let assignments = [];
+    if (groupLeaderIds !== undefined) {
+      // a. Delete existing assignments
+      await ServiceAssignment.destroy({
+        where: { service_id: id },
+        transaction,
+      });
+
+      // b. Create new ones if array is not empty
+      if (groupLeaderIds && groupLeaderIds.length > 0) {
+        for (const groupLeaderId of groupLeaderIds) {
+          // Verify if the user is a GL in this unit
+          const isGL = await UserAssignment.findOne({
+            where: { user_id: groupLeaderId, unit_id: actor.unit.id },
+            include: [{ model: Role, where: { name: "GROUP_LEADER" } }],
+            transaction,
+          });
+
+          if (!isGL) {
+            throw new AppError(`The provided Group Leader ID ${groupLeaderId} is invalid or not a Group Leader in your unit`, 400);
+          }
+
+          const assignment = await ServiceAssignment.create(
+            {
+              service_id: id,
+              group_leader_id: groupLeaderId,
+              is_active: true,
+            },
+            { transaction }
+          );
+          assignments.push(assignment);
+        }
+      }
+    } else {
+      // Fetch existing if not updating
+      assignments = await ServiceAssignment.findAll({ where: { service_id: id }, transaction });
+    }
+
+    await transaction.commit();
+
+    return {
+      service,
+      assignments,
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+};
+
+/**
+ * List all services within a specific unit with pagination
+ */
+const listServices = async (unitId, { page = 1, limit = 10 }) => {
+  try {
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await Service.findAndCountAll({
+      where: { unit_id: unitId },
+      include: [
+        {
+          model: ServiceAssignment,
+          include: [
+            {
+              model: User,
+              attributes: ["user_id", "first_name", "last_name", "email", "phone_number"],
+            },
+          ],
+        },
+      ],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [["createdAt", "DESC"]],
+      distinct: true, // Ensures count is accurate with includes
+    });
+
+    return {
+      totalItems: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: parseInt(page),
+      services: rows,
+    };
+  } catch (error) {
+    throw new AppError("Database error: Unable to fetch services", 500);
+  }
+};
+
+/**
+ * Delete a service if it has no associated requests
+ */
+const deleteServiceLogic = async (id, actor) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    // 1. Find the service
+    const service = await Service.findByPk(id, { transaction });
+    if (!service) {
+      throw new AppError("Service not found", 404);
+    }
+
+    // 2. Security Check
+    if (service.unit_id !== actor.unit.id) {
+      throw new AppError("You can only delete services within your own unit", 403);
+    }
+
+    // 3. Check for associated requests
+    const requestCount = await ServiceRequest.count({
+      where: { service_id: id },
+      transaction
+    });
+
+    if (requestCount > 0) {
+      throw new AppError("Cannot delete service: It has associated service requests. Consider deactivating assignments instead.", 400);
+    }
+
+    // 4. Delete assignments first
+    await ServiceAssignment.destroy({
+      where: { service_id: id },
+      transaction,
+    });
+
+    // 5. Delete the service
+    await service.destroy({ transaction });
+
+    await transaction.commit();
+    return true;
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -461,7 +659,7 @@ module.exports = {
   createCityService,
   listCitiesService,
   updateCityService,
-  deleteCityService,
+  deleteCityService, // This is the unit delete
   assignCityAdminService,
   createEthiopiaLevelUserService,
   updateUserPermissions,
@@ -470,4 +668,7 @@ module.exports = {
   getAllRolesService,
   getPersonnelByRoleService,
   createService,
+  updateService,
+  listServices,
+  deleteServiceLogic,
 };

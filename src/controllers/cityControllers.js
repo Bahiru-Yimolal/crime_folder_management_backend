@@ -11,6 +11,10 @@ const {
   updateUserPermissions,
   getAllPermissionsService,
   getAllRolesService,
+  createService,
+  updateService,
+  listServices,
+  deleteServiceLogic,
   getPersonnelByRoleService } = require("../services/cityService");
 
 
@@ -242,7 +246,7 @@ const createServiceController = async (req, res, next) => {
       quality_standard,
       delivery_mode,
       preconditions,
-      groupLeaderId,
+      groupLeaderIds,
     } = req.body;
 
     const result = await createService({
@@ -252,7 +256,7 @@ const createServiceController = async (req, res, next) => {
       quality_standard,
       delivery_mode,
       preconditions,
-      groupLeaderId,
+      groupLeaderIds,
       actor: req.user,
     });
 
@@ -266,11 +270,78 @@ const createServiceController = async (req, res, next) => {
   }
 };
 
+const updateServiceController = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const {
+      type,
+      place,
+      duration,
+      quality_standard,
+      delivery_mode,
+      preconditions,
+      groupLeaderIds,
+    } = req.body;
+
+    const result = await updateService(id, {
+      type,
+      place,
+      duration,
+      quality_standard,
+      delivery_mode,
+      preconditions,
+      groupLeaderIds,
+      actor: req.user,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Service updated successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const listServicesController = async (req, res, next) => {
+  try {
+    const unitId = req.user.unit.id;
+    const { page, limit } = req.query;
+
+    const result = await listServices(unitId, {
+      page: parseInt(page) || 1,
+      limit: parseInt(limit) || 10
+    });
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteServiceController = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await deleteServiceLogic(id, req.user);
+
+    res.status(200).json({
+      success: true,
+      message: "Service deleted successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createCityController,
   listCitiesController,
   updateCityController,
-  deleteCityController,
+  deleteCityController, // Unit delete
   assignCityAdminController,
   createEthiopiaLevelUserController,
   unassignUserController,
@@ -279,5 +350,8 @@ module.exports = {
   getAllPermissionsController,
   getAllRolesController,
   getPersonnelByRoleController,
-  createServiceController
+  createServiceController,
+  updateServiceController,
+  listServicesController,
+  deleteServiceController,
 };

@@ -13,6 +13,9 @@ const {
   getAllRolesController,
   getPersonnelByRoleController,
   createServiceController,
+  updateServiceController,
+  listServicesController,
+  deleteServiceController,
 } = require("../controllers/cityControllers");
 const {
   validateCityInput,
@@ -21,6 +24,7 @@ const {
   validateUnassignUserInput,
   validateUpdatePermissionsInput,
   validateCreateServiceInput,
+  validateUpdateServiceInput,
 } = require("../validators/cityValidators");
 
 const { protect, assignmentMiddleware, levelGuard, permissionMiddleware } = require("../middlewares/authMiddleware");
@@ -129,13 +133,34 @@ router.get(
   permissionMiddleware("ADMIN_PERMISSIONS"),
   getAllRolesController
 );
-// Service Management
+router.get(
+  "/services",
+  protect,
+  assignmentMiddleware,
+  listServicesController
+);
+
 router.post(
   "/services",
   protect,
   assignmentMiddleware,
   validateCreateServiceInput,
   createServiceController
+);
+
+router.put(
+  "/services/:id",
+  protect,
+  assignmentMiddleware,
+  validateUpdateServiceInput,
+  updateServiceController
+);
+
+router.delete(
+  "/services/:id",
+  protect,
+  assignmentMiddleware,
+  deleteServiceController
 );
 
 // Personnel Fetching (Group Leaders, Officers, etc. within the unit)
