@@ -36,7 +36,15 @@ const ServiceRequest = sequelize.define(
             type: DataTypes.DATE,
             allowNull: true,
         },
-        end_time: {
+        officer_completed_at: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
+        citizen_completed_at: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
+        final_completion_time: {
             type: DataTypes.DATE,
             allowNull: true,
         },

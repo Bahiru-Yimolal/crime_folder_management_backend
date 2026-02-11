@@ -171,6 +171,15 @@ const createServiceSchema = Joi.object({
     "any.required": "Delivery mode is required",
   }),
   preconditions: Joi.array().items(Joi.string()).optional(),
+  paymentAmount: Joi.string().optional().messages({
+    "string.base": "Payment amount must be a string",
+  }),
+  completion_metric: Joi.string()
+    .valid("OFFICER", "CITIZEN", "BOTH_AVERAGE")
+    .optional()
+    .messages({
+      "any.only": "Invalid completion metric. Must be OFFICER, CITIZEN, or BOTH_AVERAGE",
+    }),
   groupLeaderIds: Joi.array().items(Joi.string().uuid()).optional().messages({
     "array.base": "Group Leader IDs must be an array of UUIDs",
   }),
@@ -196,6 +205,8 @@ const updateServiceSchema = Joi.object({
   quality_standard: Joi.number().optional(),
   delivery_mode: Joi.string().optional(),
   preconditions: Joi.array().items(Joi.string()).optional(),
+  paymentAmount: Joi.string().optional(),
+  completion_metric: Joi.string().valid("OFFICER", "CITIZEN", "BOTH_AVERAGE").optional(),
   groupLeaderIds: Joi.array().items(Joi.string().uuid()).optional(),
 });
 

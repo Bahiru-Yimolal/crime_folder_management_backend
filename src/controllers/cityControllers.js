@@ -19,6 +19,8 @@ const {
   createServiceRequest,
   listAssignedRequests,
   getServicesByUnitService,
+  officerCompleteTask,
+  citizenCompleteTask,
   getPersonnelByRoleService } = require("../services/cityService");
 
 
@@ -251,6 +253,8 @@ const createServiceController = async (req, res, next) => {
       delivery_mode,
       preconditions,
       groupLeaderIds,
+      paymentAmount,
+      completion_metric,  
     } = req.body;
 
     const result = await createService({
@@ -261,6 +265,8 @@ const createServiceController = async (req, res, next) => {
       delivery_mode,
       preconditions,
       groupLeaderIds,
+      paymentAmount,
+      completion_metric,
       actor: req.user,
     });
 
@@ -284,6 +290,8 @@ const updateServiceController = async (req, res, next) => {
       quality_standard,
       delivery_mode,
       preconditions,
+      paymentAmount,
+      completion_metric,
       groupLeaderIds,
     } = req.body;
 
@@ -294,6 +302,8 @@ const updateServiceController = async (req, res, next) => {
       quality_standard,
       delivery_mode,
       preconditions,
+      paymentAmount,
+      completion_metric,
       groupLeaderIds,
       actor: req.user,
     });
@@ -409,6 +419,38 @@ const getPublicServicesController = async (req, res, next) => {
 };
 
 
+const officerCompleteTaskController = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const request = await officerCompleteTask(id, userId);
+
+    res.status(200).json({
+      success: true,
+      message: "Task marked as completed by officer",
+      data: request,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const citizenCompleteTaskController = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { user_phone } = req.body;
+    const request = await citizenCompleteTask(id, user_phone);
+
+    res.status(200).json({
+      success: true,
+      message: "Task finalized by citizen",
+      data: request,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createCityController,
   listCitiesController,
@@ -430,4 +472,6 @@ module.exports = {
   createServiceRequestController,
   listAssignedRequestsController,
   getPublicServicesController,
-  };
+  officerCompleteTaskController,
+  citizenCompleteTaskController,
+};

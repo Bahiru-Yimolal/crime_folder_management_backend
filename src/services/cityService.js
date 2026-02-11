@@ -400,6 +400,8 @@ const createService = async ({
   quality_standard,
   delivery_mode,
   preconditions,
+  paymentAmount,
+  completion_metric,
   groupLeaderIds = [],
   actor,
 }) => {
@@ -425,6 +427,8 @@ const createService = async ({
         quality_standard,
         delivery_mode,
         preconditions,
+        paymentAmount,
+        completion_metric,
         unit_id: actor.unit.id, // Derived from Admin's token
         created_by: actor.id,
       },
@@ -480,6 +484,8 @@ const updateService = async (id, {
   quality_standard,
   delivery_mode,
   preconditions,
+  paymentAmount,
+  completion_metric,
   groupLeaderIds,
   actor,
 }) => {
@@ -518,6 +524,8 @@ const updateService = async (id, {
         quality_standard: quality_standard !== undefined ? quality_standard : service.quality_standard,
         delivery_mode: delivery_mode || service.delivery_mode,
         preconditions: preconditions || service.preconditions,
+        paymentAmount: paymentAmount !== undefined ? paymentAmount : service.paymentAmount,
+        completion_metric: completion_metric || service.completion_metric,
       },
       { transaction }
     );
@@ -796,6 +804,100 @@ const getServicesByUnitService = async (unitId) => {
 };
 
 
+/**
+ * Private helper to calculate SLA and finalize request if conditions are met
+ */
+const _finalizeRequestPerformance = async (request, transaction) => {
+  const service = await Service.findByPk(request.service_id, { transaction });
+  if (!service) return;
+
+  const metric = service.completion_metric;
+  let finalTime = null;
+
+  if (metric === "OFFICER" && request.officer_completed_at) {
+    finalTime = request.officer_completed_at;
+  } else if (metric === "CITIZEN" && request.citizen_completed_at) {
+    finalTime = request.citizen_completed_at;
+  } else if (metric === "BOTH_AVERAGE" && request.officer_completed_at && request.citizen_completed_at) {
+    finalTime = new Date((request.officer_completed_at.getTime() + request.citizen_completed_at.getTime()) / 2);
+  }
+
+  // If we have enough data to finalize
+  if (finalTime) {
+    const deadline = new Date(request.start_time.getTime() + service.duration * 60000); // duration in minutes
+    const isLate = finalTime > deadline;
+
+    await request.update({
+      final_completion_time: finalTime,
+      completion_status: isLate ? "RED" : "GREEN",
+      status: "COMPLETED",
+    }, { transaction });
+  }
+};
+
+/**
+ * Officer/GL marks a task as completed
+ */
+const officerCompleteTask = async (requestId, userId) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const request = await ServiceRequest.findByPk(requestId, { transaction });
+    if (!request) throw new AppError("Service request not found", 404);
+
+    if (request.status !== "IN_PROGRESS") {
+      throw new AppError("Only tasks in progress can be completed", 400);
+    }
+
+    // Verify ownership/assignment
+    if (request.officer_id !== userId && request.group_leader_id !== userId) {
+      throw new AppError("You are not assigned to this task", 403);
+    }
+
+    await request.update({
+      officer_completed_at: new Date(),
+    }, { transaction });
+
+    await _finalizeRequestPerformance(request, transaction);
+
+    await transaction.commit();
+    return request;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+};
+
+/**
+ * Citizen marks a task as completed (Verification)
+ */
+const citizenCompleteTask = async (requestId, phone) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const request = await ServiceRequest.findByPk(requestId, { transaction });
+    if (!request) throw new AppError("Service request not found", 404);
+
+    if (request.user_phone !== phone) {
+      throw new AppError("Unauthorized: This request does not belong to this phone number", 403);
+    }
+
+    if (request.status !== "IN_PROGRESS") {
+      throw new AppError("Task is not in a state that can be citizen-completed", 400);
+    }
+
+    await request.update({
+      citizen_completed_at: new Date(),
+    }, { transaction });
+
+    await _finalizeRequestPerformance(request, transaction);
+
+    await transaction.commit();
+    return request;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+};
+
 module.exports = {
   createCityService,
   listCitiesService,
@@ -816,4 +918,6 @@ module.exports = {
   createServiceRequest,
   listAssignedRequests,
   getServicesByUnitService,
+  officerCompleteTask,
+  citizenCompleteTask,
 };

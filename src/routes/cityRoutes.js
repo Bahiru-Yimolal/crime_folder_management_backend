@@ -20,6 +20,8 @@ const {
   createServiceRequestController,
   listAssignedRequestsController,
   getPublicServicesController,
+  officerCompleteTaskController,
+  citizenCompleteTaskController,
 } = require("../controllers/cityControllers");
 const {
   validateCityInput,
@@ -171,6 +173,20 @@ router.get(
   protect,
   assignmentMiddleware,
   listAssignedRequestsController
+);
+
+// Task Completion
+router.put(
+  "/services/requests/:id/officer-complete",
+  protect,
+  assignmentMiddleware,
+  officerCompleteTaskController
+);
+
+router.patch(
+  "/services/requests/:id/citizen-complete",
+  validateCreateServiceRequestInput, // Reusing phone validator
+  citizenCompleteTaskController
 );
 
 router.post(

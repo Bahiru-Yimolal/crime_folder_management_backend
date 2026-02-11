@@ -932,6 +932,13 @@
  *                 items:
  *                   type: string
  *                 example: ["Application Form", "Birth Certificate"]
+ *               paymentAmount:
+ *                 type: string
+ *                 example: "150 Birr"
+ *               completion_metric:
+ *                 type: string
+ *                 enum: [OFFICER, CITIZEN, BOTH_AVERAGE]
+ *                 example: "OFFICER"
  *               groupLeaderIds:
  *                 type: array
  *                 items:
@@ -1014,6 +1021,13 @@
  *                 items:
  *                   type: string
  *                 example: ["Application Form"]
+ *               paymentAmount:
+ *                 type: string
+ *                 example: "200 Birr"
+ *               completion_metric:
+ *                 type: string
+ *                 enum: [OFFICER, CITIZEN, BOTH_AVERAGE]
+ *                 example: "BOTH_AVERAGE"
  *               groupLeaderIds:
  *                 type: array
  *                 items:

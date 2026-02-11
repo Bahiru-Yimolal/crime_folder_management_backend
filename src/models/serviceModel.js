@@ -39,6 +39,15 @@ const Service = sequelize.define(
             allowNull: false,
             references: { model: "AdministrativeUnits", key: "id" },
         },
+        paymentAmount: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        completion_metric: {
+            type: DataTypes.ENUM("OFFICER", "CITIZEN", "BOTH_AVERAGE"),
+            allowNull: false,
+            defaultValue: "OFFICER",
+        },
         created_by: {
             type: DataTypes.UUID,
             allowNull: false,
