@@ -3,6 +3,7 @@ const User = require("../models/userModel");
 const Role = require("../models/roleModel");
 const Permission = require("../models/permissionModel");
 const UserPermission = require("../models/userPermissionModel");
+const UserAssignment = require("../models/userAssignment");        
 const sequelize = require("../config/database");
 const { AppError } = require("../middlewares/errorMiddleware");
 const { assignUserToUnit } = require("./assignnmentService"); // Correct import path
