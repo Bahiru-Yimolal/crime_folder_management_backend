@@ -775,7 +775,7 @@ const createServiceRequest = async ({ service_id, user_phone }) => {
 /**
  * List all service requests for services managed by a specific group leader
  */
-const listAssignedRequests = async (userId, roleName, { page = 1, limit = 10, status }) => {
+const listAssignedRequests = async (userId, roleName, unitId, { page = 1, limit = 10, status }) => {
   try {
     const offset = (page - 1) * limit;
     let whereClause = {};
@@ -805,6 +805,10 @@ const listAssignedRequests = async (userId, roleName, { page = 1, limit = 10, st
     } else if (roleName === "OFFICER") {
       // 2. Officers see only their specifically assigned requests
       whereClause.officer_id = userId;
+    } else if (roleName === "HEAD") {
+      // 3. HEAD sees all requests in their unit
+      // This is handled by the include filter below if we add unit_id requirement
+      whereClause["$Service.unit_id$"] = unitId;
     } else {
       // Fallback for other roles
       return {
@@ -890,7 +894,7 @@ const _finalizeRequestPerformance = async (request, transaction) => {
 
   // If we have enough data to finalize
   if (finalTime) {
-    const deadline = new Date(request.start_time.getTime() + service.duration * 60000); // duration in minutes
+    const deadline = new Date(request.start_time.getTime() + service.duration * 3600000); // duration in hours
     const isLate = finalTime > deadline;
 
     await request.update({
@@ -904,7 +908,7 @@ const _finalizeRequestPerformance = async (request, transaction) => {
 /**
  * Officer/GL marks a task as completed
  */
-const officerCompleteTask = async (requestId, userId) => {
+const officerCompleteTask = async (requestId, userId, delayReason) => {
   const transaction = await sequelize.transaction();
   try {
     const request = await ServiceRequest.findByPk(requestId, { transaction });
@@ -931,6 +935,7 @@ const officerCompleteTask = async (requestId, userId) => {
 
     await request.update({
       officer_completed_at: new Date(),
+      delay_reason: delayReason,
     }, { transaction });
 
     await _finalizeRequestPerformance(request, transaction);
@@ -1059,7 +1064,7 @@ const assignRequestToOfficer = async (requestId, userId, officerId) => {
       updates.status = "IN_PROGRESS";
       updates.group_leader_id = userId; // The GL who acknowledged it
       updates.start_time = startTime;
-      updates.expected_completion = new Date(startTime.getTime() + request.Service.duration * 60000);
+      updates.expected_completion = new Date(startTime.getTime() + request.Service.duration * 3600000);
     }
 
     await request.update(updates, { transaction });
@@ -1106,7 +1111,7 @@ const confirmServiceRequest = async (requestId, userId) => {
       status: "IN_PROGRESS",
       group_leader_id: userId,
       start_time: startTime,
-      expected_completion: new Date(startTime.getTime() + request.Service.duration * 60000),
+      expected_completion: new Date(startTime.getTime() + request.Service.duration * 3600000),
       officer_id: null, // No officer assigned, GL is doing it
     }, { transaction });
 

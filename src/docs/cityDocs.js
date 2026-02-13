@@ -919,8 +919,8 @@
  *                 example: "Counter 1"
  *               duration:
  *                 type: integer
- *                 description: Time in minutes for the service (SLA)
- *                 example: 30
+ *                 description: Time in hours for the service (SLA)
+ *                 example: 2
  *               quality_standard:
  *                 type: number
  *                 example: 4.5
@@ -1008,8 +1008,8 @@
  *                 example: "Room 101"
  *               duration:
  *                 type: integer
- *                 description: Time in minutes for the service (SLA)
- *                 example: 45
+ *                 description: Time in hours for the service (SLA)
+ *                 example: 1
  *               quality_standard:
  *                 type: number
  *                 example: 4.8
@@ -1398,6 +1398,17 @@
  *           type: string
  *           format: uuid
  *         description: Request ID
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               delay_reason:
+ *                 type: string
+ *                 example: "System was down during peak hours"
+ *                 description: Optional reason for delay if task completed late
  *     responses:
  *       200:
  *         description: Task marked as completed successfully

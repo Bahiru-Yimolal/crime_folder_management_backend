@@ -41,6 +41,7 @@ const {
   validateAssignRequestToOfficerInput,
   validateAssignedRequestsQuery,
   validateCitizenRequestsQuery,
+  validateOfficerCompleteTaskInput,
 } = require("../validators/cityValidators");
 
 const { protect, assignmentMiddleware, levelGuard, permissionMiddleware } = require("../middlewares/authMiddleware");
@@ -196,6 +197,7 @@ router.put(
   "/services/requests/:id/officer-complete",
   protect,
   assignmentMiddleware,
+  validateOfficerCompleteTaskInput,
   officerCompleteTaskController
 );
 

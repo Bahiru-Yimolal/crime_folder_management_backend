@@ -396,7 +396,7 @@ const listAssignedRequestsController = async (req, res, next) => {
     const roleName = req.user.role.name;
     const { page, limit, status } = req.query;
 
-    const result = await listAssignedRequests(userId, roleName, {
+    const result = await listAssignedRequests(userId, roleName, req.user.unit.id, {
       page: parseInt(page) || 1,
       limit: parseInt(limit) || 10,
       status,
@@ -429,8 +429,9 @@ const getPublicServicesController = async (req, res, next) => {
 const officerCompleteTaskController = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { delay_reason } = req.body;
     const userId = req.user.id;
-    const request = await officerCompleteTask(id, userId);
+    const request = await officerCompleteTask(id, userId, delay_reason);
 
     res.status(200).json({
       success: true,

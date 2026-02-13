@@ -162,7 +162,7 @@ const createServiceSchema = Joi.object({
   }),
   duration: Joi.number().integer().min(1).required().messages({
     "number.base": "Duration must be a number",
-    "number.min": "Duration must be at least 1 minute",
+    "number.min": "Duration must be at least 1 hour",
     "any.required": "Duration is required",
   }),
   quality_standard: Joi.number().optional(),
@@ -347,6 +347,23 @@ const validateCitizenRequestsQuery = (req, res, next) => {
   next();
 };
 
+const officerCompleteTaskSchema = Joi.object({
+  delay_reason: Joi.string().optional().allow(null, ""),
+});
+
+const validateOfficerCompleteTaskInput = (req, res, next) => {
+  const { error } = officerCompleteTaskSchema.validate(req.body);
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.details[0].message,
+    });
+  }
+
+  next();
+};
+
 module.exports = {
   validateCityInput,
   validateAssignUserInput,
@@ -360,4 +377,5 @@ module.exports = {
   validateAssignRequestToOfficerInput,
   validateAssignedRequestsQuery,
   validateCitizenRequestsQuery,
+  validateOfficerCompleteTaskInput,
 };

@@ -20,7 +20,7 @@ const Service = sequelize.define(
         duration: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            comment: "Dedicated time in minutes/hours",
+            comment: "Dedicated time in hours",
         },
         quality_standard: {
             type: DataTypes.FLOAT,
