@@ -166,7 +166,7 @@ const assignSectorAdminService = async ({
 
   // 3. Fetch/Create SECTOR_ADMIN role
   const [adminRole] = await Role.findOrCreate({
-    where: { name: "SECTOR_ADMIN" },
+    where: { name: "ADMIN" },
     defaults: { description: "Sector Admin role" },
   });
 

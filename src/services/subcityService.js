@@ -184,7 +184,7 @@ const assignSubcityAdminService = async ({
 
   // 3. Fetch/Create SUBCITY_ADMIN role
   const [adminRole] = await Role.findOrCreate({
-    where: { name: "SUBCITY_ADMIN" },
+    where: { name: "ADMIN" },
     defaults: { description: "Subcity Admin role" },
   });
 
