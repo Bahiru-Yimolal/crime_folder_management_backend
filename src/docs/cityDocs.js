@@ -1308,7 +1308,7 @@
  * @swagger
  * /cities/services/requests/assigned:
  *   get:
- *     summary: List assigned service requests (Group Leaders & Officers)
+ *     summary: List assigned service requests (Group Leaders, Officers and Head)
  *     description: >
  *       Retrieves service requests based on the authenticated user's role:
  *       - **Group Leaders**: See all requests for services they are assigned to manage.
