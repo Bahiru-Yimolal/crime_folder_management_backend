@@ -5,14 +5,14 @@ const swaggerUi = require("swagger-ui-express");
 const swaggerDefinition = {
   openapi: "3.0.0",
   info: {
-    title: "Service Management System",
+    title: "Crime Folder Management System",
     version: "1.0.0",
-    description: "API documentation for Service Management System",
+    description: "API documentation for Crime Folder Management System",
   },
   servers: [
     {
-      // url: "http://localhost:5000/api",
-      url: "https://servicebackend.ilul-tech.com/api",
+      url: "http://localhost:5000/api",
+      // url: "https://servicebackend.ilul-tech.com/api",
       description: "Development server",
     },
   ],

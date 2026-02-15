@@ -12,20 +12,6 @@ const {
   getAllPermissionsController,
   getAllRolesController,
   getPersonnelByRoleController,
-  createServiceController,
-  updateServiceController,
-  listServicesController,
-  deleteServiceController,
-  listAssignedServicesController,
-  createServiceRequestController,
-  listAssignedRequestsController,
-  getPublicServicesController,
-  rejectServiceRequestController,
-  assignRequestToOfficerController,
-  confirmServiceRequestController,
-  listCitizenRequestsController,
-  officerCompleteTaskController,
-  citizenCompleteTaskController,
   getUnitPersonnelDetailsController,
 } = require("../controllers/cityControllers");
 const {
@@ -34,14 +20,6 @@ const {
   validateCreateEthiopiaUserInput,
   validateUnassignUserInput,
   validateUpdatePermissionsInput,
-  validateCreateServiceInput,
-  validateUpdateServiceInput,
-  validateCreateServiceRequestInput,
-  validateRejectServiceRequestInput,
-  validateAssignRequestToOfficerInput,
-  validateAssignedRequestsQuery,
-  validateCitizenRequestsQuery,
-  validateOfficerCompleteTaskInput,
 } = require("../validators/cityValidators");
 
 const { protect, assignmentMiddleware, levelGuard, permissionMiddleware } = require("../middlewares/authMiddleware");
@@ -150,109 +128,6 @@ router.get(
   permissionMiddleware("ADMIN_PERMISSIONS"),
   getAllRolesController
 );
-router.get(
-  "/services",
-  protect,
-  assignmentMiddleware,
-  listServicesController
-);
-
-// Public Service Discovery (for QR scanning start)
-router.get(
-  "/services/public/:unitId",
-  getPublicServicesController
-);
-
-
-router.get(
-  "/services/assigned",
-  protect,
-  assignmentMiddleware,
-  listAssignedServicesController
-);
-
-router.get(
-  "/services/requests/citizen",
-  validateCitizenRequestsQuery,
-  listCitizenRequestsController
-);
-
-// Citizen Service Request Initiation (Public)
-router.post(
-  "/services/request",
-  validateCreateServiceRequestInput,
-  createServiceRequestController
-);
-
-router.get(
-  "/services/requests/assigned",
-  protect,
-  assignmentMiddleware,
-  validateAssignedRequestsQuery,
-  listAssignedRequestsController
-);
-
-// Task Completion
-router.put(
-  "/services/requests/:id/officer-complete",
-  protect,
-  assignmentMiddleware,
-  validateOfficerCompleteTaskInput,
-  officerCompleteTaskController
-);
-
-router.patch(
-  "/services/requests/:id/citizen-complete",
-  validateCreateServiceRequestInput, // Reusing phone validator
-  citizenCompleteTaskController
-);
-
-router.patch(
-  "/services/requests/:id/reject",
-  protect,
-  assignmentMiddleware,
-  validateRejectServiceRequestInput,
-  rejectServiceRequestController
-);
-
-router.patch(
-  "/services/requests/:id/assign",
-  protect,
-  assignmentMiddleware,
-  validateAssignRequestToOfficerInput,
-  assignRequestToOfficerController
-);
-
-router.patch(
-  "/services/requests/:id/confirm",
-  protect,
-  assignmentMiddleware,
-  confirmServiceRequestController
-);
-
-router.post(
-  "/services",
-  protect,
-  assignmentMiddleware,
-  validateCreateServiceInput,
-  createServiceController
-);
-
-router.put(
-  "/services/:id",
-  protect,
-  assignmentMiddleware,
-  validateUpdateServiceInput,
-  updateServiceController
-);
-
-router.delete(
-  "/services/:id",
-  protect,
-  assignmentMiddleware,
-  deleteServiceController
-);
-
 // Personnel Fetching (Group Leaders, Officers, etc. within the unit)
 router.get(
   "/personnel",
