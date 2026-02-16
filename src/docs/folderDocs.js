@@ -44,10 +44,12 @@
  *               lawyer_name:
  *                 type: string
  *                 example: "Harvey Specter"
- *               appointment_date:
- *                 type: string
- *                 format: date
- *                 example: "2025-03-15"
+  *               appointment_dates:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: date
+ *                 example: ["2025-03-15", "2025-03-22"]
  *               folder_creation_day:
  *                 type: string
  *                 format: date
@@ -65,6 +67,25 @@
  *                 example: '[{"full_name": "Moriarty", "national_id": "ID999", "phone_number": "0900000000"}]'
  *               documents:
  *                 type: array
+ *                 description: General documents
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *               gallery:
+ *                 type: array
+ *                 description: Photos and images
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *               audio:
+ *                 type: array
+ *                 description: Voice recordings
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *               video:
+ *                 type: array
+ *                 description: Video footages
  *                 items:
  *                   type: string
  *                   format: binary

@@ -6,8 +6,8 @@ class FolderController {
             // Take administrative_unit_id from the token
             req.body.administrative_unit_id = req.user.unit.id;
 
-            // console.log(req.body);
-            // console.log(req.files); 
+            console.log(req.body);
+            console.log(req.files); 
 
             const folder = await folderService.createFolder(req.body, req.files, req.user.id);
 

@@ -25,7 +25,7 @@ class FolderService {
                 justice_location_place,
                 inspector_name,
                 lawyer_name,
-                appointment_date,
+                appointment_dates,
                 folder_creation_day,
                 decision,
                 accusers,
@@ -42,7 +42,7 @@ class FolderService {
                     justice_location_place,
                     inspector_name,
                     lawyer_name,
-                    appointment_date,
+                    appointment_dates,
                     folder_creation_day,
                     decision,
                     created_by: userId,
@@ -55,7 +55,7 @@ class FolderService {
             await this._handlePersons(folder.id, accused_persons, "accused", transaction);
 
             // 3. Handle Files
-            if (files && files.length > 0) {
+            if (files && Object.keys(files).length > 0) {
                 await this._handleFiles(folder, files, userId, transaction);
             }
 
@@ -145,12 +145,15 @@ class FolderService {
         }
     }
 
-    async _handleFiles(folder, files, userId, transaction) {
+    async _handleFiles(folder, fields, userId, transaction) {
+        // Fetch Administrative Unit name for the path
         const unit = await AdministrativeUnit.findByPk(folder.administrative_unit_id);
+        const unitSlug = unit ? `${unit.level.toLowerCase()}_${unit.name.toLowerCase().replace(/\s+/g, '_')}` : "unknown_unit";
 
         // Year from folder_creation_day or current date
         const creationDate = folder.folder_creation_day ? new Date(folder.folder_creation_day) : new Date();
         const year = creationDate.getFullYear().toString();
+        const folderName = `crime_${folder.id}`;
 
         // Map subcategory to top-level folder
         const categoryMapping = {
@@ -163,40 +166,68 @@ class FolderService {
         const topCategory = categoryMapping[folder.crime_category] || "other";
         const subCategory = folder.crime_category;
 
-        const unitName = unit.name.toLowerCase().replace(/\s+/g, '_');
-        const folderName = `crime_${folder.id}`;
+        try {
+            // Iterate through each field (documents, gallery, audio, video)
+            for (const [fieldName, files] of Object.entries(fields)) {
+                if (!files || files.length === 0) continue;
 
-        // Structured path: uploads/YEAR/TOP_CAT/SUB_CAT/UNIT_NAME/crime_ID
-        // relativePath should NOT include 'uploads' because BASE_FILE_URL already has it
-        const relativePath = path.join(year, topCategory, subCategory, unitName, folderName);
-        const absolutePath = path.join(__dirname, "../../uploads", relativePath);
+                // Path Structure: YEAR/TOP_CAT/SUB_CAT/UNIT_NAME/crime_ID/FIELD_NAME/
+                const fieldPath = path.join(year, topCategory, subCategory, unitSlug, folderName, fieldName);
+                const absoluteFieldPath = path.join(__dirname, "../../uploads/documents", fieldPath);
 
-        if (!fs.existsSync(absolutePath)) {
-            fs.mkdirSync(absolutePath, { recursive: true });
-        }
+                if (!fs.existsSync(absoluteFieldPath)) {
+                    fs.mkdirSync(absoluteFieldPath, { recursive: true });
+                }
 
-        for (const file of files) {
-            const finalDest = path.join(absolutePath, file.filename);
-            fs.renameSync(file.path, finalDest);
+                for (const file of files) {
+                    const finalDest = path.join(absoluteFieldPath, file.filename);
 
-            await Documents.create({
-                crime_id: folder.id,
-                administrative_unit_id: folder.administrative_unit_id,
-                file_name: file.originalname,
-                file_type: this._getFileType(file.mimetype),
-                file_path: path.join(relativePath, file.filename),
-                file_size: file.size,
-                uploaded_by: userId,
-            }, { transaction });
+                    // Move file from temp to final destination
+                    if (fs.existsSync(file.path)) {
+                        fs.renameSync(file.path, finalDest);
+                    }
+
+                    await Documents.create({
+                        crime_id: folder.id,
+                        administrative_unit_id: folder.administrative_unit_id,
+                        file_name: file.originalname,
+                        file_type: this._getFileTypeByField(fieldName, file.mimetype),
+                        file_path: path.join(fieldPath, file.filename),
+                        file_size: file.size,
+                        uploaded_by: userId,
+                    }, { transaction });
+                }
+            }
+        } catch (error) {
+            // Cleanup temp files if something fails during move or DB creation
+            this._cleanupFields(fields);
+            throw error;
         }
     }
 
-    _getFileType(mimetype) {
-        if (mimetype.startsWith("image/")) return 1; // Photo
-        if (mimetype.startsWith("video/")) return 2; // Video
-        if (mimetype.startsWith("audio/")) return 3; // Audio
-        if (mimetype === "application/pdf") return 4; // PDF
-        return 5; // Other
+    _getFileTypeByField(fieldName, mimetype) {
+        // Map fields to file_type IDs: 1=Photo (gallery), 2=Video, 3=Audio, 4=PDF (documents), 5=Other
+        if (fieldName === "gallery") return 1;
+        if (fieldName === "video") return 2;
+        if (fieldName === "audio") return 3;
+        if (fieldName === "documents") {
+            if (mimetype === "application/pdf") return 4;
+            return 5;
+        }
+        return 5;
+    }
+
+    _cleanupFields(fields) {
+        if (!fields) return;
+        Object.values(fields).forEach(fileArray => {
+            if (Array.isArray(fileArray)) {
+                fileArray.forEach(file => {
+                    if (fs.existsSync(file.path)) {
+                        fs.unlinkSync(file.path);
+                    }
+                });
+            }
+        });
     }
 }
 

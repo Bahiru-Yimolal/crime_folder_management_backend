@@ -14,7 +14,7 @@ const folderSchema = Joi.object({
     justice_location_place: Joi.string().optional().allow(null, ""),
     inspector_name: Joi.string().optional().allow(null, ""),
     lawyer_name: Joi.string().optional().allow(null, ""),
-    appointment_date: Joi.date().optional().allow(null, ""),
+    appointment_dates: Joi.array().items(Joi.date()).optional().default([]),
     folder_creation_day: Joi.date().optional().allow(null, ""),
     decision: Joi.string().optional().allow(null, ""),
     accusers: Joi.array().items(
@@ -32,30 +32,69 @@ const folderSchema = Joi.object({
         })
     ).min(1).required(),
     administrative_unit_id: Joi.string().optional(),
+    // Allow file fields in body if they are sent as empty strings/placeholders by Swagger
+    documents: Joi.any().optional(),
+    gallery: Joi.any().optional(),
+    audio: Joi.any().optional(),
+    video: Joi.any().optional(),
 });
 
 const cleanupFiles = (files) => {
-    if (files && Array.isArray(files)) {
-        files.forEach(file => {
-            if (fs.existsSync(file.path)) {
-                fs.unlinkSync(file.path);
+    if (!files) return;
+
+    // If files is an object (upload.fields)
+    if (typeof files === "object" && !Array.isArray(files)) {
+        Object.values(files).forEach(fileArray => {
+            if (Array.isArray(fileArray)) {
+                fileArray.forEach(file => {
+                    if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+                });
             }
+        });
+    }
+    // If files is an array (upload.array)
+    else if (Array.isArray(files)) {
+        files.forEach(file => {
+            if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
         });
     }
 };
 
 const validateFolder = (req, res, next) => {
     // Parse JSON strings for accusers/accused_persons if they come from multipart/form-data
+    // Parse JSON strings for accusers/accused_persons/appointment_dates if they come from multipart/form-data
     try {
-        if (typeof req.body.accusers === "string") {
-            req.body.accusers = JSON.parse(req.body.accusers);
-        }
-        if (typeof req.body.accused_persons === "string") {
-            req.body.accused_persons = JSON.parse(req.body.accused_persons);
-        }
+        const parseParsedField = (field) => {
+            if (req.body[field] === "" || req.body[field] === undefined || req.body[field] === "undefined") {
+                if (field === "appointment_dates") {
+                    req.body[field] = [];
+                } else if (field === "accusers" || field === "accused_persons") {
+                    // Keep as is for Joi to catch missing required fields
+                } else {
+                    delete req.body[field];
+                }
+                return;
+            }
+
+            if (typeof req.body[field] === "string") {
+                const trimmed = req.body[field].trim();
+                if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+                    req.body[field] = JSON.parse(trimmed);
+                } else if (field === "appointment_dates" && trimmed !== "") {
+                    req.body.appointment_dates = [trimmed];
+                }
+            }
+        };
+
+        parseParsedField("accusers");
+        parseParsedField("accused_persons");
+        parseParsedField("appointment_dates");
     } catch (e) {
         cleanupFiles(req.files);
-        return res.status(400).json({ success: false, message: "Invalid JSON format in accusers or accused_persons arrays" });
+        return res.status(400).json({
+            success: false,
+            message: "Invalid format in accusers, accused_persons, or appointment_dates. Expected JSON array or plural fields."
+        });
     }
 
     const { error } = folderSchema.validate(req.body, { abortEarly: false });

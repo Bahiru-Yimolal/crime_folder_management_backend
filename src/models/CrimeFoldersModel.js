@@ -44,8 +44,8 @@ const CrimeFolders = sequelize.define(
             allowNull: true,
             defaultValue: DataTypes.NOW,
         },
-        appointment_date: {
-            type: DataTypes.DATEONLY,
+        appointment_dates: {
+            type: DataTypes.JSON,
             allowNull: true,
         },
         decision: {
