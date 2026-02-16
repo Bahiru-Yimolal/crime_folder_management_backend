@@ -132,6 +132,25 @@ class FolderService {
         }
     }
 
+    async getFolderById(id, unitId) {
+        const folder = await CrimeFolders.findOne({
+            where: {
+                id: id,
+                administrative_unit_id: unitId
+            },
+            include: [
+                { model: Persons },
+                { model: Documents }
+            ]
+        });
+
+        if (!folder) {
+            throw new AppError("Crime folder not found", 404);
+        }
+
+        return folder;
+    }
+
     async _handlePersons(crimeId, persons, role, transaction) {
         for (const personData of persons) {
             // Persons table now includes crime_id and role directly
@@ -210,10 +229,7 @@ class FolderService {
         if (fieldName === "gallery") return 1;
         if (fieldName === "video") return 2;
         if (fieldName === "audio") return 3;
-        if (fieldName === "documents") {
-            if (mimetype === "application/pdf") return 4;
-            return 5;
-        }
+        if (fieldName === "documents") return 4;
         return 5;
     }
 

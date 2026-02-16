@@ -6,8 +6,8 @@ class FolderController {
             // Take administrative_unit_id from the token
             req.body.administrative_unit_id = req.user.unit.id;
 
-            console.log(req.body);
-            console.log(req.files); 
+            // console.log(req.body);
+            // console.log(req.files); 
 
             const folder = await folderService.createFolder(req.body, req.files, req.user.id);
 
@@ -60,6 +60,22 @@ class FolderController {
                     currentPage: result.currentPage,
                     limit: parseInt(limit)
                 }
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async getFolderById(req, res, next) {
+        try {
+            const { id } = req.params;
+            const unitId = req.user.unit.id;
+
+            const folder = await folderService.getFolderById(id, unitId);
+
+            res.status(200).json({
+                status: "success",
+                data: folder
             });
         } catch (error) {
             next(error);

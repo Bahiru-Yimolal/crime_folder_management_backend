@@ -31,14 +31,16 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage: storage,
     fileFilter: (req, file, cb) => {
-        const allowedTypes = /jpeg|jpg|png|svg|gif|pdf|doc|docx|mp4|mp3|wav|mkv|m4a/;
-        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-        const mimetype = allowedTypes.test(file.mimetype);
+        const allowedExts = /jpeg|jpg|png|svg|gif|pdf|doc|docx|mp4|mp3|wav|mkv|m4a/;
+        const allowedMimeSubstrings = /image|pdf|msword|wordprocessingml|officedocument|video|audio|mpeg|vnd\.ms-|vnd\.openxmlformats-|wps-office/;
 
-        if (extname && mimetype) {
+        const extname = allowedExts.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedMimeSubstrings.test(file.mimetype.toLowerCase()) || file.mimetype === "application/octet-stream";
+
+        if (extname && (mimetype || file.mimetype === "application/octet-stream")) {
             return cb(null, true);
         } else {
-            cb(new Error("Only images, PDFs, audio, and video files are allowed!"));
+            cb(new Error(`File type not allowed: ${file.originalname} (MIME: ${file.mimetype}). Only images, PDFs, documents, audio, and video files are permitted.`));
         }
     },
 });

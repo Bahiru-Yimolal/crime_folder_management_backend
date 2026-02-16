@@ -210,4 +210,37 @@
  *         description: Unauthorized
  *       500:
  *         description: Internal server error
+ *
+ * /folders/{id}:
+ *   get:
+ *     summary: Get a specific crime folder by ID
+ *     tags: [Folders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Crime folder ID
+ *     responses:
+ *       200:
+ *         description: Crime folder details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   $ref: '#/components/schemas/CrimeFolder'
+ *       404:
+ *         description: Crime folder not found
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
  */

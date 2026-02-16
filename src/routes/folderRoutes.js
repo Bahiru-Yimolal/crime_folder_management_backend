@@ -21,6 +21,20 @@ router.post(
     folderController.createFolder
 );
 router.get("/", protect, assignmentMiddleware, permissionMiddleware("READ_FOLDER"), folderController.getAllFolders);
-router.get("/my-folders", protect, assignmentMiddleware, permissionMiddleware("READ_FOLDER"), folderController.getMyFolders);
+router.get(
+    "/my-folders",
+    protect,
+    assignmentMiddleware,
+    permissionMiddleware("READ_FOLDER"),
+    folderController.getMyFolders
+);
+
+router.get(
+    "/:id",
+    protect,
+    assignmentMiddleware,
+    permissionMiddleware("READ_FOLDER"),
+    folderController.getFolderById
+);
 
 module.exports = router;
