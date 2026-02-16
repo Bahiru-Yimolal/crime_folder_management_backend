@@ -173,7 +173,7 @@ class FolderService {
 
                 // Path Structure: YEAR/TOP_CAT/SUB_CAT/UNIT_NAME/crime_ID/FIELD_NAME/
                 const fieldPath = path.join(year, topCategory, subCategory, unitSlug, folderName, fieldName);
-                const absoluteFieldPath = path.join(__dirname, "../../uploads/documents", fieldPath);
+                const absoluteFieldPath = path.join(__dirname, "../../uploads", fieldPath);
 
                 if (!fs.existsSync(absoluteFieldPath)) {
                     fs.mkdirSync(absoluteFieldPath, { recursive: true });
