@@ -24,7 +24,7 @@ const {
   updateOwnSectorUserController,
 } = require("../controllers/sectorControllers");
 
-const router = express.Router();
+const   router = express.Router();
 
 // Create Sector
 router.post(
