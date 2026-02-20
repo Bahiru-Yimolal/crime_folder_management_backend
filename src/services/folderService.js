@@ -2,6 +2,7 @@ const { CrimeFolders, Persons, Documents, AdministrativeUnit, User } = require("
 const path = require("path");
 const fs = require("fs");
 const sequelize = require("../config/database");
+const { Op } = require("sequelize");
 const { AppError } = require("../middlewares/errorMiddleware");
 
 class FolderService {
@@ -149,6 +150,96 @@ class FolderService {
         }
 
         return folder;
+    }
+
+    async searchFolders(unitId, column, value, page = 1, limit = 10) {
+        try {
+            const offset = (page - 1) * limit;
+            const folderColumns = ["inspection_number", "crime_category", "inspection_location_place", "justice_location_place", "inspector_name", "lawyer_name", "decision"];
+            const personColumns = ["full_name", "national_id", "phone_number", "role"];
+
+            let whereClause = { administrative_unit_id: unitId };
+            let personWhereClause = {};
+
+            if (folderColumns.includes(column)) {
+                whereClause[column] = { [Op.iLike]: `%${value}%` };
+            } else if (personColumns.includes(column)) {
+                personWhereClause[column] = { [Op.iLike]: `%${value}%` };
+            } else {
+                throw new AppError(`Invalid search column: ${column}`, 400);
+            }
+
+            const { count, rows } = await CrimeFolders.findAndCountAll({
+                where: whereClause,
+                include: [
+                    {
+                        model: Persons,
+                        where: Object.keys(personWhereClause).length > 0 ? personWhereClause : undefined,
+                        required: Object.keys(personWhereClause).length > 0, // Inner join if searching by person
+                        attributes: ["id", "full_name", "national_id", "phone_number", "role"],
+                    },
+                    {
+                        model: Documents,
+                        attributes: ["id", "file_name", "file_type", "file_path", "file_size"],
+                    }
+                ],
+                limit: parseInt(limit),
+                offset: parseInt(offset),
+                order: [["createdAt", "DESC"]],
+                distinct: true // Important when using includes with limit/offset
+            });
+
+            return {
+                totalItems: count,
+                folders: rows,
+                totalPages: Math.ceil(count / limit),
+                currentPage: parseInt(page),
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async softDeleteFolder(id, unitId) {
+        const folder = await CrimeFolders.findOne({
+            where: {
+                id: id,
+                administrative_unit_id: unitId
+            }
+        });
+
+        if (!folder) {
+            throw new AppError("Crime folder not found", 404);
+        }
+
+        await folder.destroy();
+        return true;
+    }
+
+    async addFolderDocuments(id, unitId, fieldName, files, userId) {
+        const folder = await CrimeFolders.findOne({
+            where: {
+                id: id,
+                administrative_unit_id: unitId
+            }
+        });
+
+        if (!folder) {
+            throw new AppError("Crime folder not found", 404);
+        }
+
+        const transaction = await sequelize.transaction();
+        try {
+            // Re-use _handleFiles logic by wrapping the field
+            const fields = { [fieldName]: files };
+            await this._handleFiles(folder, fields, userId, transaction);
+
+            await transaction.commit();
+            return { message: "Documents added successfully" };
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
     }
 
     async _handlePersons(crimeId, persons, role, transaction) {

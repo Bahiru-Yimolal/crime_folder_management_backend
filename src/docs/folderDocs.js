@@ -211,6 +211,68 @@
  *       500:
  *         description: Internal server error
  *
+ * /folders/search:
+ *   get:
+ *     summary: Search crime folders by a specific column and value
+ *     tags: [Folders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: column
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: "Search column (e.g., inspection_number, full_name, phone_number)"
+ *       - in: query
+ *         name: value
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search value
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Search results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/CrimeFolder'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalItems:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
+ *                     currentPage:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *       400:
+ *         description: Invalid search column or missing parameters
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ *
  * /folders/{id}:
  *   get:
  *     summary: Get a specific crime folder by ID
@@ -237,6 +299,95 @@
  *                   example: success
  *                 data:
  *                   $ref: '#/components/schemas/CrimeFolder'
+ *       404:
+ *         description: Crime folder not found
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ *
+ * /folders/{id}/soft-delete:
+ *   patch:
+ *     summary: Soft delete a crime folder
+ *     tags: [Folders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Crime folder ID
+ *     responses:
+ *       200:
+ *         description: Crime folder soft deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: Crime folder soft deleted successfully
+ *       404:
+ *         description: Crime folder not found
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ *
+ * /folders/{id}/documents:
+ *   post:
+ *     summary: Add more documents/files to an existing crime folder
+ *     tags: [Folders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Crime folder ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - fieldName
+ *               - files
+ *             properties:
+ *               fieldName:
+ *                 type: string
+ *                 description: "The category for these files: gallery, video, audio, or documents"
+ *                 example: "gallery"
+ *               files:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       200:
+ *         description: Documents added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: Documents added successfully
+ *       400:
+ *         description: Validation error or no files uploaded
  *       404:
  *         description: Crime folder not found
  *       401:

@@ -81,6 +81,73 @@ class FolderController {
             next(error);
         }
     }
+
+    async searchFolders(req, res, next) {
+        try {
+            const unitId = req.user.unit.id;
+            const { column, value, page = 1, limit = 10 } = req.query;
+
+            if (!column || !value) {
+                throw new AppError("Search column and value are required", 400);
+            }
+
+            const result = await folderService.searchFolders(unitId, column, value, page, limit);
+
+            res.status(200).json({
+                status: "success",
+                data: result.folders,
+                pagination: {
+                    totalItems: result.totalItems,
+                    totalPages: result.totalPages,
+                    currentPage: result.currentPage,
+                    limit: parseInt(limit)
+                }
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async softDeleteFolder(req, res, next) {
+        try {
+            const { id } = req.params;
+            const unitId = req.user.unit.id;
+
+            await folderService.softDeleteFolder(id, unitId);
+
+            res.status(200).json({
+                status: "success",
+                message: "Crime folder soft deleted successfully"
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async addFolderDocuments(req, res, next) {
+        try {
+            const { id } = req.params;
+            const unitId = req.user.unit.id;
+            const { fieldName } = req.body;
+
+            if (!fieldName) {
+                throw new AppError("fieldName is required (gallery, video, audio, or documents)", 400);
+            }
+
+            if (!req.files || req.files.length === 0) {
+                throw new AppError("No files uploaded", 400);
+            }
+
+            const result = await folderService.addFolderDocuments(id, unitId, fieldName, req.files, req.user.id);
+
+            res.status(200).json({
+                status: "success",
+                message: result.message
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 module.exports = new FolderController();

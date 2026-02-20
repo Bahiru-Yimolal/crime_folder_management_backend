@@ -30,11 +30,36 @@ router.get(
 );
 
 router.get(
+    "/search",
+    protect,
+    assignmentMiddleware,
+    permissionMiddleware("READ_FOLDER"),
+    folderController.searchFolders
+);
+
+router.get(
     "/:id",
     protect,
     assignmentMiddleware,
     permissionMiddleware("READ_FOLDER"),
     folderController.getFolderById
+);
+
+router.patch(
+    "/:id/soft-delete",
+    protect,
+    assignmentMiddleware,
+    permissionMiddleware("DELETE_FOLDER"),
+    folderController.softDeleteFolder
+);
+
+router.post(
+    "/:id/documents",
+    protect,
+    assignmentMiddleware,
+    permissionMiddleware("CREATE_FOLDER"),
+    upload.array("files", 10), // Limit to 10 files per request
+    folderController.addFolderDocuments
 );
 
 module.exports = router;

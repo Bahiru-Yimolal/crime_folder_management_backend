@@ -65,6 +65,7 @@ const CrimeFolders = sequelize.define(
     {
         tableName: "CrimeFolders",
         timestamps: true,
+        paranoid: true,
         indexes: [
             { unique: true, fields: ["inspection_number"] },
             { fields: ["administrative_unit_id"] },
